@@ -221,3 +221,145 @@ def cleanup_cache() -> Dict[str, Any]:
             'status': 'error',
             'error': str(e),
         }
+
+
+@celery_app.task(bind=True, name="app.tasks.explanation_tasks.evaluate_explanation_quality_task")
+def evaluate_explanation_quality_task(self, eval_id: str, explanation_id: str) -> Dict[str, Any]:
+    """
+    Evaluate explanation quality using Quantus metrics.
+    
+    Args:
+        eval_id: Quality evaluation ID
+        explanation_id: Explanation ID to evaluate
+        
+    Returns:
+        Dictionary with evaluation results
+    """
+    import redis
+    import pickle
+    import numpy as np
+    from pathlib import Path
+    from app.utils.metrics.quantus_metrics import QuantusEvaluator
+    
+    logger.info("Starting quality evaluation",
+               eval_id=eval_id,
+               explanation_id=explanation_id,
+               task_id=self.request.id)
+    
+    try:
+        # Connect to Redis
+        redis_client = redis.Redis(host='redis', port=6379, db=2, decode_responses=True)
+        
+        # Update status
+        eval_data = redis_client.get(f"quality_eval:{eval_id}")
+        if eval_data:
+            eval_info = json.loads(eval_data)
+            eval_info["status"] = "processing"
+            redis_client.setex(f"quality_eval:{eval_id}", 3600, json.dumps(eval_info))
+        
+        # Get explanation data
+        exp_data = redis_client.get(f"explanation:{explanation_id}")
+        if not exp_data:
+            raise ValueError(f"Explanation {explanation_id} not found")
+        
+        explanation = json.loads(exp_data)
+        result = json.loads(explanation["result"])
+        model_id = explanation["model_id"]
+        
+        # Get model from database
+        db = get_sync_session()
+        from app.models.model import Model
+        model = db.query(Model).filter(Model.id == model_id).first()
+        
+        if not model:
+            raise ValueError(f"Model {model_id} not found")
+        
+        db.close()
+        
+        # Load model file
+        model_path = Path(f"data/models/{model_id}/model.pkl")
+        with open(model_path, 'rb') as f:
+            loaded_model = pickle.load(f)
+        
+        # Load test data
+        dataset_id = model.dataset_id
+        test_data_path = Path(f"data/processed/{dataset_id}/test.csv")
+        test_df = pd.read_csv(test_data_path)
+        
+        # Separate features and target
+        if 'isFraud' in test_df.columns:
+            X_test = test_df.drop('isFraud', axis=1)
+            y_test = test_df['isFraud']
+        else:
+            X_test = test_df
+            y_test = pd.Series([0] * len(test_df))
+        
+        # Sample for evaluation (use 100 samples)
+        sample_size = min(100, len(X_test))
+        sample_indices = np.random.choice(len(X_test), sample_size, replace=False)
+        X_sample = X_test.iloc[sample_indices]
+        y_sample = y_test.iloc[sample_indices]
+        
+        # Extract attributions from explanation
+        feature_importance = result.get('feature_importance', [])
+        
+        # Create attribution matrix (importance scores for each feature)
+        feature_names = X_sample.columns.tolist()
+        attributions = np.zeros((len(X_sample), len(feature_names)))
+        
+        # Map feature importance to attribution matrix
+        for feat_info in feature_importance:
+            feat_name = feat_info['feature']
+            if feat_name in feature_names:
+                feat_idx = feature_names.index(feat_name)
+                # Use same importance for all samples (global explanation)
+                attributions[:, feat_idx] = feat_info['importance']
+        
+        # Initialize Quantus evaluator
+        evaluator = QuantusEvaluator(loaded_model, X_sample, y_sample)
+        
+        # Evaluate all metrics
+        quality_results = evaluator.evaluate_all(attributions, num_samples=sample_size)
+        
+        # Save results to Redis
+        eval_data = redis_client.get(f"quality_eval:{eval_id}")
+        if eval_data:
+            eval_info = json.loads(eval_data)
+            eval_info["status"] = "completed"
+            eval_info["result"] = json.dumps(quality_results)
+            redis_client.setex(f"quality_eval:{eval_id}", 3600, json.dumps(eval_info))
+        
+        logger.info("Quality evaluation complete",
+                   eval_id=eval_id,
+                   overall_quality=quality_results.get('overall_quality'))
+        
+        return {
+            'status': 'success',
+            'eval_id': eval_id,
+            'task_id': self.request.id,
+            'quality_score': quality_results.get('overall_quality'),
+        }
+        
+    except Exception as e:
+        logger.error("Quality evaluation failed",
+                    eval_id=eval_id,
+                    task_id=self.request.id,
+                    exc_info=e)
+        
+        # Update status to failed
+        try:
+            eval_data = redis_client.get(f"quality_eval:{eval_id}")
+            if eval_data:
+                eval_info = json.loads(eval_data)
+                eval_info["status"] = "failed"
+                eval_info["error"] = str(e)
+                redis_client.setex(f"quality_eval:{eval_id}", 3600, json.dumps(eval_info))
+        except:
+            pass
+        
+        return {
+            'status': 'error',
+            'eval_id': eval_id,
+            'error': str(e),
+            'task_id': self.request.id,
+        }

@@ -2,7 +2,7 @@
 XAI explanation generation endpoints.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Any
 import uuid
 import json
@@ -151,3 +151,63 @@ async def compare_explanations(model_id: str):
             "p_value": float(p_value)
         }
     }
+
+
+@router.post("/evaluate-quality/{explanation_id}")
+async def evaluate_explanation_quality(explanation_id: str, background_tasks: BackgroundTasks):
+    """
+    Evaluate explanation quality using Quantus metrics.
+    
+    This endpoint triggers a background task to evaluate:
+    - Faithfulness (monotonicity, selectivity)
+    - Robustness (stability under perturbations)
+    - Complexity (sparsity, interpretability)
+    """
+    # Get explanation
+    data = redis_client.get(f"explanation:{explanation_id}")
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="Explanation not found")
+    
+    explanation = json.loads(data)
+    
+    if explanation["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Explanation not yet completed")
+    
+    # Create quality evaluation task ID
+    eval_id = str(uuid.uuid4())
+    
+    # Store evaluation task in Redis
+    eval_data = {
+        "id": eval_id,
+        "explanation_id": explanation_id,
+        "status": "pending",
+        "result": None
+    }
+    redis_client.setex(
+        f"quality_eval:{eval_id}",
+        3600,
+        json.dumps(eval_data)
+    )
+    
+    # Trigger Celery task for quality evaluation
+    from app.tasks.explanation_tasks import evaluate_explanation_quality_task
+    task = evaluate_explanation_quality_task.delay(eval_id, explanation_id)
+    
+    return {
+        "id": eval_id,
+        "status": "pending",
+        "message": "Quality evaluation started",
+        "task_id": task.id
+    }
+
+
+@router.get("/quality/{eval_id}")
+async def get_quality_evaluation(eval_id: str):
+    """Get quality evaluation results."""
+    data = redis_client.get(f"quality_eval:{eval_id}")
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="Quality evaluation not found")
+    
+    return json.loads(data)
