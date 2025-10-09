@@ -91,3 +91,17 @@ async def root():
 async def health():
     """Basic health check."""
     return {"status": "healthy"}
+
+
+@app.get("/docs")
+async def docs_redirect():
+    """Redirect to API documentation."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"{settings.API_V1_PREFIX}/docs")
+
+
+@app.get("/redoc")
+async def redoc_redirect():
+    """Redirect to ReDoc documentation."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"{settings.API_V1_PREFIX}/redoc")
