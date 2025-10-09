@@ -20,7 +20,9 @@ export default function ModelDetailPage() {
   const { isAuthenticated, logout, user } = useAuthStore();
   const { selectedModel, selectedMetrics, fetchModelById, fetchModelMetrics, isLoading } = useModelsStore();
   
-  const [explanation, setExplanation] = useState<any>(null);
+  const [shapExplanation, setShapExplanation] = useState<any>(null);
+  const [limeExplanation, setLimeExplanation] = useState<any>(null);
+  const [selectedMethod, setSelectedMethod] = useState<'shap' | 'lime'>('shap');
   const [isGeneratingExplanation, setIsGeneratingExplanation] = useState(false);
   const [isGeneratingLime, setIsGeneratingLime] = useState(false);
   const [limeProgress, setLimeProgress] = useState<string>('');
@@ -67,10 +69,11 @@ export default function ModelDetailPage() {
           
           if (result.data.status === 'completed') {
             clearInterval(pollInterval);
-            console.log('Explanation completed! Result:', result.data.result);
+            console.log('SHAP Explanation completed! Result:', result.data.result);
             const parsedResult = JSON.parse(result.data.result);
             console.log('Parsed result:', parsedResult);
-            setExplanation(parsedResult);
+            setShapExplanation(parsedResult);
+            setSelectedMethod('shap');
             setIsGeneratingExplanation(false);
           } else if (result.data.status === 'failed') {
             clearInterval(pollInterval);
@@ -108,20 +111,20 @@ export default function ModelDetailPage() {
       
       const explanationId = response.data.id;
       setLimeTaskId(explanationId);
-      setLimeProgress('LIME generation in progress... (0/3 min)');
+      setLimeProgress('LIME generation in progress... (0/5 min)');
       
       // Poll for completion
       let pollCount = 0;
-      const maxPolls = 90; // 3 minutes at 2 second intervals (OPTIMIZED!)
+      const maxPolls = 150; // 5 minutes at 2 second intervals (safety buffer)
       const startTime = Date.now();
       
       const pollInterval = setInterval(async () => {
         try {
           pollCount++;
           const elapsed = Math.floor((Date.now() - startTime) / 1000 / 60); // minutes
-          const remaining = Math.max(0, 3 - elapsed);
+          const remaining = Math.max(0, 5 - elapsed);
           
-          setLimeProgress(`LIME generation in progress... (${elapsed}/3 min, ~${remaining} min remaining)`);
+          setLimeProgress(`LIME generation in progress... (${elapsed}/5 min, ~${remaining} min remaining)`);
           
           const result = await explanationsAPI.getById(explanationId);
           console.log('LIME poll result:', result.data.status);
@@ -129,6 +132,11 @@ export default function ModelDetailPage() {
           if (result.data.status === 'completed') {
             clearInterval(pollInterval);
             setLimeProgress('LIME generation complete! ✅');
+            
+            // Parse and save LIME result
+            const parsedResult = JSON.parse(result.data.result);
+            setLimeExplanation(parsedResult);
+            setSelectedMethod('lime');
             setIsGeneratingLime(false);
             
             // Show success
@@ -137,7 +145,7 @@ export default function ModelDetailPage() {
               setLimeTaskId(null);
             }, 3000);
             
-            console.log('LIME completed!');
+            console.log('LIME completed!', parsedResult);
           } else if (result.data.status === 'failed') {
             clearInterval(pollInterval);
             setLimeProgress('');
@@ -413,6 +421,44 @@ export default function ModelDetailPage() {
               </button>
             </div>
 
+            {/* Method Switcher */}
+            {(shapExplanation || limeExplanation) && (
+              <div className="bg-white rounded-lg shadow p-4">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-medium text-gray-700">View Explanation:</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedMethod('shap')}
+                      disabled={!shapExplanation}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedMethod === 'shap'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      🔮 SHAP
+                    </button>
+                    <button
+                      onClick={() => setSelectedMethod('lime')}
+                      disabled={!limeExplanation}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedMethod === 'lime'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      🍋 LIME
+                    </button>
+                  </div>
+                  {shapExplanation && limeExplanation && (
+                    <span className="text-xs text-green-600 font-medium">
+                      ✓ Both methods available
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* LIME Progress Indicator */}
             {limeProgress && (
               <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6">
@@ -431,13 +477,13 @@ export default function ModelDetailPage() {
                       <div 
                         className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-500 ease-out"
                         style={{ 
-                          width: `${Math.min(100, (parseInt(limeProgress.match(/\((\d+)\/3/)?.[1] || '0') / 3) * 100)}%` 
+                          width: `${Math.min(100, (parseInt(limeProgress.match(/\((\d+)\/5/)?.[1] || '0') / 5) * 100)}%` 
                         }}
                       ></div>
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
                       <p>• LIME analyzes 200 samples with perturbations (OPTIMIZED!)</p>
-                      <p>• This process takes approximately 3 minutes ⚡</p>
+                      <p>• This process takes approximately 3-5 minutes ⚡</p>
                       <p>• You can leave this page and come back later</p>
                       <p className="font-medium text-green-700">• Progress is saved automatically ✓</p>
                     </div>
@@ -447,17 +493,17 @@ export default function ModelDetailPage() {
             )}
 
             {/* Explanation Section */}
-            {explanation && (
+            {(shapExplanation || limeExplanation) && (
               <div className="bg-white rounded-lg shadow-sm border">
                 <div className="px-6 py-4 border-b">
-                  <h2 className="text-xl font-bold text-gray-900">SHAP Explanation</h2>
+                <h2 className="text-xl font-bold text-gray-900"> {selectedMethod === 'shap' ? 'SHAP' : 'LIME'} Explanation </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     Understanding feature importance and model predictions
                   </p>
                 </div>
                 <div className="p-6">
                   <ExplanationViewer 
-                    explanation={explanation} 
+                    explanation={selectedMethod === 'shap' ? shapExplanation : limeExplanation} 
                     type="global"
                   />
                 </div>
