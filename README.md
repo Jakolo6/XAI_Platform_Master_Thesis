@@ -299,7 +299,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 **Jakob Lindner**  
 Nova School of Business and Economics  
-Email: [your.email@novasbe.pt]  
+Email: [57322@novasbe.pt]  
 GitHub: [@Jakolo6](https://github.com/Jakolo6)
 
 ---
