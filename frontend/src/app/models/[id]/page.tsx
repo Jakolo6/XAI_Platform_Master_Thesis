@@ -116,7 +116,7 @@ export default function ModelDetailPage() {
       const startTime = Date.now();
       
       const pollInterval = setInterval(async () => {
-        try:
+        try {
           pollCount++;
           const elapsed = Math.floor((Date.now() - startTime) / 1000 / 60); // minutes
           const remaining = Math.max(0, 3 - elapsed);
