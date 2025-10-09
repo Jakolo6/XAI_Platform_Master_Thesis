@@ -23,6 +23,8 @@ export default function ModelDetailPage() {
   const [explanation, setExplanation] = useState<any>(null);
   const [isGeneratingExplanation, setIsGeneratingExplanation] = useState(false);
   const [isGeneratingLime, setIsGeneratingLime] = useState(false);
+  const [limeProgress, setLimeProgress] = useState<string>('');
+  const [limeTaskId, setLimeTaskId] = useState<string | null>(null);
   const [explanationError, setExplanationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -97,20 +99,69 @@ export default function ModelDetailPage() {
   const handleGenerateLime = async () => {
     setIsGeneratingLime(true);
     setExplanationError(null);
+    setLimeProgress('Starting LIME generation...');
     
     try {
       console.log('Generating LIME explanation for model:', modelId);
       const response = await explanationsAPI.generate(modelId, 'lime', {});
       console.log('LIME explanation started:', response.data);
       
-      // Show success message
-      alert('LIME explanation generation started! This will take approximately 15 minutes. You can check back later or wait on this page.');
+      const explanationId = response.data.id;
+      setLimeTaskId(explanationId);
+      setLimeProgress('LIME generation in progress... (0/15 min)');
       
-      setIsGeneratingLime(false);
+      // Poll for completion
+      let pollCount = 0;
+      const maxPolls = 450; // 15 minutes at 2 second intervals
+      const startTime = Date.now();
+      
+      const pollInterval = setInterval(async () => {
+        try {
+          pollCount++;
+          const elapsed = Math.floor((Date.now() - startTime) / 1000 / 60); // minutes
+          const remaining = Math.max(0, 15 - elapsed);
+          
+          setLimeProgress(`LIME generation in progress... (${elapsed}/15 min, ~${remaining} min remaining)`);
+          
+          const result = await explanationsAPI.getById(explanationId);
+          console.log('LIME poll result:', result.data.status);
+          
+          if (result.data.status === 'completed') {
+            clearInterval(pollInterval);
+            setLimeProgress('LIME generation complete! ✅');
+            setIsGeneratingLime(false);
+            
+            // Show success
+            setTimeout(() => {
+              setLimeProgress('');
+              setLimeTaskId(null);
+            }, 3000);
+            
+            console.log('LIME completed!');
+          } else if (result.data.status === 'failed') {
+            clearInterval(pollInterval);
+            setLimeProgress('');
+            setIsGeneratingLime(false);
+            setLimeTaskId(null);
+            setExplanationError('LIME generation failed. Please try again.');
+          } else if (pollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setLimeProgress('');
+            setIsGeneratingLime(false);
+            setLimeTaskId(null);
+            setExplanationError('LIME generation timed out. Please check back later.');
+          }
+        } catch (pollError) {
+          console.error('Polling error:', pollError);
+        }
+      }, 2000);
+      
     } catch (error: any) {
       console.error('LIME generation error:', error);
       setExplanationError(error.response?.data?.detail || 'Failed to generate LIME explanation');
       setIsGeneratingLime(false);
+      setLimeProgress('');
+      setLimeTaskId(null);
     }
   };
 
@@ -361,6 +412,39 @@ export default function ModelDetailPage() {
                 Download Model
               </button>
             </div>
+
+            {/* LIME Progress Indicator */}
+            {limeProgress && (
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-300 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      🔬 LIME Explanation Generation
+                    </h3>
+                    <p className="text-gray-700 font-medium mb-3">
+                      {limeProgress}
+                    </p>
+                    <div className="bg-white rounded-full h-3 overflow-hidden mb-3">
+                      <div 
+                        className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-500 ease-out"
+                        style={{ 
+                          width: `${Math.min(100, (parseInt(limeProgress.match(/\((\d+)\/15/)?.[1] || '0') / 15) * 100)}%` 
+                        }}
+                      ></div>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>• LIME analyzes 1,000 samples with perturbations</p>
+                      <p>• This process takes approximately 15 minutes</p>
+                      <p>• You can leave this page and come back later</p>
+                      <p className="font-medium text-green-700">• Progress is saved automatically ✓</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Explanation Section */}
             {explanation && (
