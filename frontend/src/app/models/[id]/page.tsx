@@ -22,6 +22,7 @@ export default function ModelDetailPage() {
   
   const [explanation, setExplanation] = useState<any>(null);
   const [isGeneratingExplanation, setIsGeneratingExplanation] = useState(false);
+  const [isGeneratingLime, setIsGeneratingLime] = useState(false);
   const [explanationError, setExplanationError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -90,6 +91,26 @@ export default function ModelDetailPage() {
       console.error('Generation error:', error);
       setExplanationError(error.response?.data?.detail || 'Failed to generate explanation');
       setIsGeneratingExplanation(false);
+    }
+  };
+
+  const handleGenerateLime = async () => {
+    setIsGeneratingLime(true);
+    setExplanationError(null);
+    
+    try {
+      console.log('Generating LIME explanation for model:', modelId);
+      const response = await explanationsAPI.generate(modelId, 'lime', {});
+      console.log('LIME explanation started:', response.data);
+      
+      // Show success message
+      alert('LIME explanation generation started! This will take approximately 15 minutes. You can check back later or wait on this page.');
+      
+      setIsGeneratingLime(false);
+    } catch (error: any) {
+      console.error('LIME generation error:', error);
+      setExplanationError(error.response?.data?.detail || 'Failed to generate LIME explanation');
+      setIsGeneratingLime(false);
     }
   };
 
@@ -308,24 +329,32 @@ export default function ModelDetailPage() {
             )}
 
             {/* Actions */}
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleGenerateExplanation}
                 disabled={isGeneratingExplanation || (selectedModel?.model_type !== 'xgboost' && selectedModel?.model_type !== 'catboost' && selectedModel?.model_type !== 'lightgbm' && selectedModel?.model_type !== 'random_forest')}
                 className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingExplanation ? 'Generating...' : 'Generate SHAP Explanation'}
+                {isGeneratingExplanation ? 'Generating...' : 'Generate SHAP'}
+              </button>
+              <button
+                onClick={handleGenerateLime}
+                disabled={isGeneratingLime || (selectedModel?.model_type !== 'xgboost' && selectedModel?.model_type !== 'catboost' && selectedModel?.model_type !== 'lightgbm' && selectedModel?.model_type !== 'random_forest')}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isGeneratingLime ? 'Generating...' : 'Generate LIME'}
               </button>
               <Link
                 href={`/models/${modelId}/compare`}
                 className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Compare SHAP vs LIME
+                Compare Methods
               </Link>
               <button
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
                 disabled
               >
                 <Download className="h-4 w-4 mr-2" />

@@ -59,7 +59,14 @@ export default function ComparePage() {
       setLoading(false);
     } catch (err: any) {
       console.error('Failed to fetch comparison:', err);
-      setError(err.response?.data?.detail || 'Failed to load comparison data');
+      const errorDetail = err.response?.data?.detail || 'Failed to load comparison data';
+      
+      // Check if it's a missing explanations error
+      if (errorDetail.includes('SHAP and LIME explanations required')) {
+        setError('missing_explanations');
+      } else {
+        setError(errorDetail);
+      }
       setLoading(false);
     }
   };
@@ -76,6 +83,51 @@ export default function ComparePage() {
   }
 
   if (error) {
+    // Special handling for missing explanations
+    if (error === 'missing_explanations') {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl">
+            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4 text-center">
+              Explanations Not Ready
+            </h2>
+            <p className="text-gray-600 text-center mb-6">
+              To compare SHAP and LIME, you need to generate both explanations first.
+            </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+              <h3 className="font-semibold text-blue-900 mb-3">📋 Quick Setup:</h3>
+              <ol className="space-y-2 text-blue-800 text-sm">
+                <li>1. Go back to the model detail page</li>
+                <li>2. Click <strong>"Generate SHAP Explanation"</strong> (takes ~3 seconds)</li>
+                <li>3. Wait for SHAP to complete</li>
+                <li>4. Click <strong>"Generate LIME Explanation"</strong> (takes ~15 minutes)</li>
+                <li>5. Wait for LIME to complete</li>
+                <li>6. Return here to see the comparison!</li>
+              </ol>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => router.push(`/models/${modelId}`)}
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Go to Model Page
+              </button>
+              <button
+                onClick={fetchData}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Generic error handling
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
