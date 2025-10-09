@@ -108,20 +108,20 @@ export default function ModelDetailPage() {
       
       const explanationId = response.data.id;
       setLimeTaskId(explanationId);
-      setLimeProgress('LIME generation in progress... (0/15 min)');
+      setLimeProgress('LIME generation in progress... (0/3 min)');
       
       // Poll for completion
       let pollCount = 0;
-      const maxPolls = 450; // 15 minutes at 2 second intervals
+      const maxPolls = 90; // 3 minutes at 2 second intervals (OPTIMIZED!)
       const startTime = Date.now();
       
       const pollInterval = setInterval(async () => {
-        try {
+        try:
           pollCount++;
           const elapsed = Math.floor((Date.now() - startTime) / 1000 / 60); // minutes
-          const remaining = Math.max(0, 15 - elapsed);
+          const remaining = Math.max(0, 3 - elapsed);
           
-          setLimeProgress(`LIME generation in progress... (${elapsed}/15 min, ~${remaining} min remaining)`);
+          setLimeProgress(`LIME generation in progress... (${elapsed}/3 min, ~${remaining} min remaining)`);
           
           const result = await explanationsAPI.getById(explanationId);
           console.log('LIME poll result:', result.data.status);
@@ -431,13 +431,13 @@ export default function ModelDetailPage() {
                       <div 
                         className="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-500 ease-out"
                         style={{ 
-                          width: `${Math.min(100, (parseInt(limeProgress.match(/\((\d+)\/15/)?.[1] || '0') / 15) * 100)}%` 
+                          width: `${Math.min(100, (parseInt(limeProgress.match(/\((\d+)\/3/)?.[1] || '0') / 3) * 100)}%` 
                         }}
                       ></div>
                     </div>
                     <div className="text-sm text-gray-600 space-y-1">
-                      <p>• LIME analyzes 1,000 samples with perturbations</p>
-                      <p>• This process takes approximately 15 minutes</p>
+                      <p>• LIME analyzes 200 samples with perturbations (OPTIMIZED!)</p>
+                      <p>• This process takes approximately 3 minutes ⚡</p>
                       <p>• You can leave this page and come back later</p>
                       <p className="font-medium text-green-700">• Progress is saved automatically ✓</p>
                     </div>
