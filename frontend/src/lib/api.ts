@@ -114,6 +114,8 @@ export const explanationsAPI = {
   getById: (id: string) => api.get(`/explanations/${id}`),
   
   getByModel: (modelId: string) => api.get(`/explanations/model/${modelId}`),
+  
+  compare: (modelId: string) => api.get(`/explanations/compare/${modelId}`),
 };
 
 export default api;

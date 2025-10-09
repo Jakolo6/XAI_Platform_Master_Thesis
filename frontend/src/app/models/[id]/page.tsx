@@ -317,6 +317,13 @@ export default function ModelDetailPage() {
                 <Sparkles className="h-4 w-4 mr-2" />
                 {isGeneratingExplanation ? 'Generating...' : 'Generate SHAP Explanation'}
               </button>
+              <Link
+                href={`/models/${modelId}/compare`}
+                className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Compare SHAP vs LIME
+              </Link>
               <button
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 disabled
@@ -324,12 +331,6 @@ export default function ModelDetailPage() {
                 <Download className="h-4 w-4 mr-2" />
                 Download Model
               </button>
-              <Link
-                href="/models/compare"
-                className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Compare with Others
-              </Link>
             </div>
 
             {/* Explanation Section */}
