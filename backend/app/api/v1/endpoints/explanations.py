@@ -78,3 +78,76 @@ async def get_model_explanations(model_id: str):
                 explanations.append(exp)
     
     return explanations
+
+
+@router.get("/compare/{model_id}")
+async def compare_explanations(model_id: str):
+    """Compare SHAP and LIME explanations for a model."""
+    # Get all explanations for this model
+    explanations = []
+    for key in redis_client.scan_iter(match="explanation:*"):
+        data = redis_client.get(key)
+        if data:
+            exp = json.loads(data)
+            if exp["model_id"] == model_id and exp["status"] == "completed":
+                explanations.append(exp)
+    
+    # Separate by method
+    shap_exp = None
+    lime_exp = None
+    
+    for exp in explanations:
+        result = json.loads(exp["result"])
+        method = result.get("method", exp.get("method", "unknown"))
+        if method == "shap":
+            shap_exp = result
+        elif method == "lime":
+            lime_exp = result
+    
+    if not shap_exp or not lime_exp:
+        raise HTTPException(
+            status_code=404, 
+            detail="Both SHAP and LIME explanations required for comparison"
+        )
+    
+    # Calculate agreement metrics
+    shap_features = {f["feature"]: f for f in shap_exp["feature_importance"][:20]}
+    lime_features = {f["feature"]: f for f in lime_exp["feature_importance"][:20]}
+    
+    common_features = set(shap_features.keys()) & set(lime_features.keys())
+    
+    # Top-k agreement
+    top_5_shap = set([f["feature"] for f in shap_exp["feature_importance"][:5]])
+    top_5_lime = set([f["feature"] for f in lime_exp["feature_importance"][:5]])
+    top_5_agreement = len(top_5_shap & top_5_lime) / 5
+    
+    top_10_shap = set([f["feature"] for f in shap_exp["feature_importance"][:10]])
+    top_10_lime = set([f["feature"] for f in lime_exp["feature_importance"][:10]])
+    top_10_agreement = len(top_10_shap & top_10_lime) / 10
+    
+    # Rank correlation for common features
+    if len(common_features) > 0:
+        shap_ranks = {f: i for i, f in enumerate([x["feature"] for x in shap_exp["feature_importance"]])}
+        lime_ranks = {f: i for i, f in enumerate([x["feature"] for x in lime_exp["feature_importance"]])}
+        
+        from scipy.stats import spearmanr
+        common_list = list(common_features)
+        shap_rank_list = [shap_ranks[f] for f in common_list]
+        lime_rank_list = [lime_ranks[f] for f in common_list]
+        correlation, p_value = spearmanr(shap_rank_list, lime_rank_list)
+    else:
+        correlation = 0
+        p_value = 1
+    
+    return {
+        "model_id": model_id,
+        "shap": shap_exp,
+        "lime": lime_exp,
+        "comparison": {
+            "common_features": len(common_features),
+            "top_5_agreement": float(top_5_agreement),
+            "top_10_agreement": float(top_10_agreement),
+            "rank_correlation": float(correlation),
+            "p_value": float(p_value)
+        }
+    }
