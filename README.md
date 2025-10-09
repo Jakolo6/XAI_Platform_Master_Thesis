@@ -167,17 +167,57 @@ Password: research123
 
 ---
 
+## 📖 How to Use This Repository
+
+### For Researchers & Students
+
+1. **Clone and Install** - Follow [INSTALLATION.md](INSTALLATION.md) for complete setup
+2. **Explore the Platform** - Login and navigate the dashboard
+3. **Train Models** - Use the UI to train fraud detection models
+4. **Generate Explanations** - Create SHAP/LIME explanations for model predictions
+5. **Analyze Results** - Compare model performance and explanation quality
+6. **Extend the Platform** - Add new XAI methods or models (see [CONTRIBUTING.md](CONTRIBUTING.md))
+
+### For Thesis Committee
+
+1. **Review Documentation** - Start with [PROJECT_STATUS.md](PROJECT_STATUS.md)
+2. **Understand Architecture** - Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+3. **See Implementation Plan** - Check [THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md)
+4. **Test the Platform** - Follow Quick Start above
+5. **Review Code Quality** - Explore backend/frontend structure
+
+### For Practitioners
+
+1. **Deploy Platform** - Use Docker Compose for production deployment
+2. **Upload Your Data** - Replace IEEE-CIS with your fraud detection dataset
+3. **Train Custom Models** - Configure hyperparameters via API or UI
+4. **Generate Reports** - Export XAI audit reports for compliance
+5. **Integrate with Systems** - Use REST API for integration
+
+### For Contributors
+
+1. **Read Guidelines** - See [CONTRIBUTING.md](CONTRIBUTING.md)
+2. **Setup Development** - Follow [INSTALLATION.md](INSTALLATION.md)
+3. **Pick an Issue** - Check [GitHub Issues](https://github.com/Jakolo6/XAI_Platform_Master_Thesis/issues)
+4. **Submit PR** - Follow the contribution workflow
+5. **Get Recognition** - Be listed in contributors
+
+---
+
 ## 📚 Documentation
 
-| Document | Description |
-|----------|-------------|
-| [THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md) | Complete 9-phase roadmap for thesis completion |
-| [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) | Daily task tracking and progress |
-| [PROJECT_STATUS.md](PROJECT_STATUS.md) | Current implementation status |
-| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Detailed installation instructions |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture and design decisions |
-| [docs/API.md](docs/API.md) | API endpoint documentation |
-| [docs/DATASETS.md](docs/DATASETS.md) | Dataset information and preprocessing |
+| Document | Description | Audience |
+|----------|-------------|----------|
+| **[README.md](README.md)** | Project overview and quick start | Everyone |
+| **[INSTALLATION.md](INSTALLATION.md)** | Complete installation guide | New users |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | Contribution guidelines | Contributors |
+| **[THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md)** | 9-phase development roadmap | Researchers |
+| **[IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md)** | Daily task tracking | Developers |
+| **[PROJECT_STATUS.md](PROJECT_STATUS.md)** | Current implementation status | Committee |
+| **[SETUP_GUIDE.md](SETUP_GUIDE.md)** | Quick setup reference | Users |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System architecture | Technical |
+| **[docs/API.md](docs/API.md)** | API endpoint documentation | Developers |
+| **[docs/DATASETS.md](docs/DATASETS.md)** | Dataset information | Researchers |
 
 ---
 
