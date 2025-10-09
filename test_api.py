@@ -180,10 +180,9 @@ class TestRunner:
             response = requests.post(
                 f"{API_BASE}/explanations/generate",
                 headers=self.get_headers(),
-                json={
+                params={
                     "model_id": self.model_id,
-                    "method": "shap",
-                    "params": {}
+                    "method": "shap"
                 },
                 timeout=10
             )
@@ -226,10 +225,9 @@ class TestRunner:
             response = requests.post(
                 f"{API_BASE}/explanations/generate",
                 headers=self.get_headers(),
-                json={
+                params={
                     "model_id": self.model_id,
-                    "method": "lime",
-                    "params": {}
+                    "method": "lime"
                 },
                 timeout=10
             )
