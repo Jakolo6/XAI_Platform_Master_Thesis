@@ -214,7 +214,6 @@ Password: research123
 | **[THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md)** | 9-phase development roadmap | Researchers |
 | **[IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md)** | Daily task tracking | Developers |
 | **[PROJECT_STATUS.md](PROJECT_STATUS.md)** | Current implementation status | Committee |
-| **[SETUP_GUIDE.md](SETUP_GUIDE.md)** | Quick setup reference | Users |
 | **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System architecture | Technical |
 | **[docs/API.md](docs/API.md)** | API endpoint documentation | Developers |
 | **[docs/DATASETS.md](docs/DATASETS.md)** | Dataset information | Researchers |
