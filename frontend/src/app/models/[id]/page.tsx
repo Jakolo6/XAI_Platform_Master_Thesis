@@ -12,6 +12,10 @@ import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
 import ExplanationViewer from '@/components/explanations/ExplanationViewer';
 import { explanationsAPI } from '@/lib/api';
 
+// Enable debug logging in development
+const DEBUG = process.env.NODE_ENV === 'development';
+const log = (...args: any[]) => DEBUG && console.log(...args);
+
 export default function ModelDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -50,9 +54,9 @@ export default function ModelDetailPage() {
     setExplanationError(null);
     
     try {
-      console.log('Generating explanation for model:', modelId);
+      log('Generating explanation for model:', modelId);
       const response = await explanationsAPI.generate(modelId, 'shap', {});
-      console.log('Explanation started:', response.data);
+      log('Explanation started:', response.data);
       
       // Poll for completion
       const explanationId = response.data.id;
@@ -62,16 +66,16 @@ export default function ModelDetailPage() {
       const pollInterval = setInterval(async () => {
         try {
           pollCount++;
-          console.log(`Polling attempt ${pollCount}/${maxPolls}...`);
+          log(`Polling attempt ${pollCount}/${maxPolls}...`);
           
           const result = await explanationsAPI.getById(explanationId);
-          console.log('Poll result:', result.data.status);
+          log('Poll result:', result.data.status);
           
           if (result.data.status === 'completed') {
             clearInterval(pollInterval);
-            console.log('SHAP Explanation completed! Result:', result.data.result);
+            log('SHAP Explanation completed! Result:', result.data.result);
             const parsedResult = JSON.parse(result.data.result);
-            console.log('Parsed result:', parsedResult);
+            log('Parsed result:', parsedResult);
             setShapExplanation(parsedResult);
             setSelectedMethod('shap');
             setIsGeneratingExplanation(false);
@@ -105,9 +109,9 @@ export default function ModelDetailPage() {
     setLimeProgress('Starting LIME generation...');
     
     try {
-      console.log('Generating LIME explanation for model:', modelId);
+      log('Generating LIME explanation for model:', modelId);
       const response = await explanationsAPI.generate(modelId, 'lime', {});
-      console.log('LIME explanation started:', response.data);
+      log('LIME explanation started:', response.data);
       
       const explanationId = response.data.id;
       setLimeTaskId(explanationId);
@@ -127,7 +131,7 @@ export default function ModelDetailPage() {
           setLimeProgress(`LIME generation in progress... (${elapsed}/5 min, ~${remaining} min remaining)`);
           
           const result = await explanationsAPI.getById(explanationId);
-          console.log('LIME poll result:', result.data.status);
+          log('LIME poll result:', result.data.status);
           
           if (result.data.status === 'completed') {
             clearInterval(pollInterval);
@@ -145,7 +149,7 @@ export default function ModelDetailPage() {
               setLimeTaskId(null);
             }, 3000);
             
-            console.log('LIME completed!', parsedResult);
+            log('LIME completed!', parsedResult);
           } else if (result.data.status === 'failed') {
             clearInterval(pollInterval);
             setLimeProgress('');
