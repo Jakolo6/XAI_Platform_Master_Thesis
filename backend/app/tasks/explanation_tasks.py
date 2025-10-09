@@ -108,20 +108,53 @@ def generate_explanation(
         # Sample background data (100 samples for efficiency)
         background_data = X_val.sample(min(100, len(X_val)), random_state=42)
         
-        # Initialize SHAP explainer
-        explainer = ShapExplainer(str(model_path), model.model_type)
-        explainer.initialize_explainer(background_data)
+        # Route to appropriate explainer based on method
+        if method == 'shap':
+            # Initialize SHAP explainer
+            explainer = ShapExplainer(str(model_path), model.model_type)
+            explainer.initialize_explainer(background_data)
+            
+            # Get instance to explain from config
+            instance_data = config.get('instance_data')
+            if instance_data:
+                # Explain single instance
+                instance_df = pd.DataFrame([instance_data])
+                explanation_result = explainer.explain_instance(instance_df)
+            else:
+                # Generate global feature importance
+                sample_data = X_val.sample(min(1000, len(X_val)), random_state=42)
+                explanation_result = explainer.get_global_feature_importance(sample_data)
         
-        # Get instance to explain from config
-        instance_data = config.get('instance_data')
-        if instance_data:
-            # Explain single instance
-            instance_df = pd.DataFrame([instance_data])
-            explanation_result = explainer.explain_instance(instance_df)
+        elif method == 'lime':
+            # Initialize LIME explainer
+            from app.utils.explainers.lime_explainer import LimeExplainer
+            
+            # Load the actual model for LIME (needs predict_proba)
+            import pickle
+            with open(model_path, 'rb') as f:
+                loaded_model = pickle.load(f)
+            
+            logger.info("Model loaded successfully for LIME", model_path=str(model_path))
+            
+            explainer = LimeExplainer(
+                model=loaded_model,
+                feature_names=X_val.columns.tolist(),
+                training_data=background_data
+            )
+            
+            # Get instance to explain from config
+            instance_data = config.get('instance_data')
+            if instance_data:
+                # Explain single instance
+                instance_df = pd.DataFrame([instance_data])
+                explanation_result = explainer.explain_instance(instance_df)
+            else:
+                # Generate global feature importance
+                sample_data = X_val.sample(min(1000, len(X_val)), random_state=42)
+                explanation_result = explainer.get_global_feature_importance(sample_data)
+        
         else:
-            # Generate global feature importance
-            sample_data = X_val.sample(min(1000, len(X_val)), random_state=42)
-            explanation_result = explainer.get_global_feature_importance(sample_data)
+            raise ValueError(f"Unsupported explanation method: {method}")
         
         # Save explanation results to Redis
         data = redis_client.get(f"explanation:{explanation_id}")

@@ -1,77 +1,119 @@
-# XAI Finance Benchmark Platform
+# 🧠 XAI Platform for Financial Fraud Detection
 
-> **Explainable AI in Financial Services: Benchmarking Predictive and Interpretability Performance**
+> **Master's Thesis Project:** Explainable AI in Financial Services - Benchmarking Predictive and Interpretability Performance
 
-A comprehensive research platform for benchmarking explainable AI (XAI) methods in financial fraud detection contexts. This platform supports reproducible evaluation of ML models and explanation algorithms using the IEEE-CIS Fraud Detection dataset.
+A production-ready research platform for comparing explainable AI (XAI) methods in financial fraud detection. Built with FastAPI, Next.js, and Docker.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com/)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
 
 **Institution:** Nova School of Business and Economics  
-**Status:** Phase 2 - Backend Core Development (60% complete)  
-**Last Updated:** 2025-10-08
+**Status:** Phase 1 Complete ✅ | Phase 2 In Progress 🚀  
+**Last Updated:** October 9, 2025
 
 ---
 
-## 🎯 Project Goal
+## 🎯 Overview
 
-Develop a reproducible, extensible, and interactive web platform for benchmarking explainable AI (XAI) methods in financial contexts. The platform enables comparison of predictive models and explanation algorithms using real-world financial datasets, focusing on accuracy, interpretability, and regulatory transparency.
+This platform enables researchers and practitioners to:
+- **Train** 6 ML models on fraud detection data (CatBoost, XGBoost, RF, LightGBM, MLP, LogReg)
+- **Explain** predictions using multiple XAI methods (SHAP, LIME, DiCE)
+- **Compare** explanation quality using quantitative metrics (Quantus)
+- **Evaluate** human trust through interactive studies
+- **Generate** regulatory compliance reports (EU AI Act, GDPR)
+
+### Key Features
+✅ **590,540 transactions** from IEEE-CIS Fraud Detection dataset  
+✅ **94.3% AUC-ROC** best model performance (CatBoost)  
+✅ **Real-time explanations** with async task processing  
+✅ **Interactive dashboard** with feature importance visualization  
+✅ **Docker deployment** for reproducibility  
 
 ---
 
 ## 📊 Current Status
 
-### ✅ Phase 1: Infrastructure (100% Complete)
-- Complete backend scaffold with FastAPI
-- Database models for all entities
-- Authentication system (JWT)
-- Docker configuration
-- CI/CD pipeline
-- Comprehensive documentation
+### ✅ Phase 1: Foundation (Complete)
+- Full-stack architecture (FastAPI + Next.js + PostgreSQL + Redis)
+- 6 trained models with comprehensive metrics
+- SHAP explanations working end-to-end
+- Interactive dashboard with real-time updates
+- Authentication and authorization
+- Docker containerization
 
-### 🔄 Phase 2: Backend Core (60% Complete)
-- ✅ Dataset management fully implemented
-- ✅ Kaggle API integration
-- ✅ Data preprocessing pipeline
-- ⏳ Model training (next priority)
-- ⏳ XAI explanation generation
+### 🚀 Phase 2: Multi-Method XAI (In Progress)
+- ✅ SHAP integration complete
+- 🔄 LIME integration in progress
+- ⏳ DiCE counterfactuals (planned)
+- ⏳ Comparison dashboard (planned)
 
-### ⏳ Phase 3-7: Upcoming
-- Frontend development (Next.js 15)
-- Human study module
-- Report generation
-- Deployment to Netlify/Render
+### 📋 Roadmap
+See [THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md) for the complete 9-phase roadmap.
 
 ---
 
 ## 🏗️ Architecture
 
-- **Frontend**: Next.js 15 + TypeScript + TailwindCSS + shadcn/ui (Netlify)
-- **Backend**: FastAPI + Celery + Redis + PostgreSQL (Render)
-- **Storage**: Supabase for datasets, models, and reports
-- **Dataset**: IEEE-CIS Fraud Detection (Kaggle API integration)
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   Frontend  │ ───> │   Backend    │ ───> │  Database   │
+│  (Next.js)  │ <─── │  (FastAPI)   │ <─── │ (Postgres)  │
+└─────────────┘      └──────────────┘      └─────────────┘
+                            │
+                            ↓
+                     ┌──────────────┐      ┌─────────────┐
+                     │    Celery    │ ───> │    Redis    │
+                     │   Workers    │ <─── │   (Cache)   │
+                     └──────────────┘      └─────────────┘
+```
+
+**Tech Stack:**
+- **Frontend:** Next.js 15, TypeScript, TailwindCSS, Recharts, Zustand
+- **Backend:** FastAPI, SQLAlchemy, Celery, Structlog
+- **Database:** PostgreSQL (async with asyncpg)
+- **Cache:** Redis (Celery broker + explanation storage)
+- **ML:** scikit-learn, XGBoost, LightGBM, CatBoost
+- **XAI:** SHAP, LIME, Quantus
+- **Deployment:** Docker Compose
 
 ---
 
 ## 📁 Project Structure
 
 ```
-xai-finance-benchmark/
-├── backend/              # FastAPI application (Phase 1 & 2)
+xai-platform/
+├── backend/
 │   ├── app/
-│   │   ├── api/         # API endpoints
-│   │   ├── core/        # Configuration & database
-│   │   ├── models/      # SQLAlchemy models
-│   │   ├── tasks/       # Celery tasks
-│   │   └── utils/       # Utilities (preprocessing, Kaggle)
-│   ├── workers.py       # Celery configuration
-│   └── requirements.txt # Python dependencies
-├── frontend/            # Next.js app (Phase 3 - not started)
-├── data/                # Dataset storage
-├── docs/                # Documentation
-├── .github/             # CI/CD workflows
-├── docker-compose.yml   # Docker services
-├── .env.example         # Environment template
-├── PROJECT_STATUS.md    # Detailed status
-├── NEXT_STEPS.md        # Implementation guide
-└── QUICK_START.md       # Quick reference
+│   │   ├── api/v1/endpoints/    # API routes
+│   │   ├── core/                # Config & database
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── tasks/               # Celery tasks
+│   │   └── utils/
+│   │       ├── explainers/      # SHAP, LIME, DiCE
+│   │       ├── preprocessing.py # Data pipeline
+│   │       └── training.py      # Model training
+│   ├── data/                    # Datasets & models (gitignored)
+│   ├── requirements.txt
+│   └── workers.py               # Celery config
+├── frontend/
+│   ├── src/
+│   │   ├── app/                 # Next.js pages
+│   │   ├── components/          # React components
+│   │   ├── lib/                 # API client
+│   │   └── store/               # Zustand stores
+│   └── package.json
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── API.md
+│   └── DATASETS.md
+├── docker-compose.yml
+├── .env.example
+├── THESIS_ENHANCEMENT_PLAN.md   # 9-phase roadmap
+├── IMPLEMENTATION_CHECKLIST.md  # Task tracking
+├── PROJECT_STATUS.md            # Current status
+└── README.md                    # This file
 ```
 
 ---
@@ -79,116 +121,122 @@ xai-finance-benchmark/
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python 3.11+** (you have 3.13 ✅)
-- **Docker Desktop** (not installed yet ❌)
-- **Kaggle credentials** (configured ✅)
+- Docker Desktop ([Download](https://www.docker.com/products/docker-desktop))
+- Kaggle API credentials ([Setup Guide](https://www.kaggle.com/docs/api))
+- 8GB+ RAM recommended
 
-### Installation
-
-#### Option 1: Docker (Recommended)
+### 1. Clone Repository
 ```bash
-# Install Docker Desktop from:
-# https://www.docker.com/products/docker-desktop
+git clone https://github.com/Jakolo6/XAI_Platform_Master_Thesis.git
+cd XAI_Platform_Master_Thesis
+```
 
-# Start all services
+### 2. Configure Environment
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Add your Kaggle credentials to .env
+# KAGGLE_USERNAME=your_username
+# KAGGLE_KEY=your_api_key
+```
+
+### 3. Start Services
+```bash
+# Start all services (backend, frontend, database, redis, celery)
 docker-compose up -d
 
 # Check status
 docker-compose ps
 
 # View logs
-docker-compose logs -f
+docker-compose logs -f backend
 ```
 
-#### Option 2: Manual Setup
-```bash
-# Install PostgreSQL and Redis
-brew install postgresql@15 redis
+### 4. Access Platform
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://localhost:8000
+- **API Docs:** http://localhost:8000/api/v1/docs
+- **Celery Flower:** http://localhost:5555
 
-# Start services
-brew services start postgresql@15
-brew services start redis
-
-# Setup backend
-cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Start backend
-uvicorn app.main:app --reload
+### 5. Login
 ```
-
-### Verify Installation
-```bash
-# Health check
-curl http://localhost:8000/api/v1/health/detailed
-
-# API documentation
-open http://localhost:8000/api/v1/docs
+Email: researcher@xai.com
+Password: research123
 ```
 
 ---
 
 ## 📚 Documentation
 
-- **[PROJECT_STATUS.md](PROJECT_STATUS.md)** - Detailed project status and completion
-- **[NEXT_STEPS.md](NEXT_STEPS.md)** - Comprehensive implementation guide
-- **[QUICK_START.md](QUICK_START.md)** - Quick reference for next AI session
-- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Installation and setup instructions
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design
-- **[API Documentation](http://localhost:8000/api/v1/docs)** - Interactive API docs (when running)
+| Document | Description |
+|----------|-------------|
+| [THESIS_ENHANCEMENT_PLAN.md](THESIS_ENHANCEMENT_PLAN.md) | Complete 9-phase roadmap for thesis completion |
+| [IMPLEMENTATION_CHECKLIST.md](IMPLEMENTATION_CHECKLIST.md) | Daily task tracking and progress |
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | Current implementation status |
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Detailed installation instructions |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture and design decisions |
+| [docs/API.md](docs/API.md) | API endpoint documentation |
+| [docs/DATASETS.md](docs/DATASETS.md) | Dataset information and preprocessing |
 
 ---
 
-## 🧪 Research Features
+## 🧪 Features
 
-### Model Training
-- **Algorithms**: Logistic Regression, Random Forest, XGBoost, LightGBM, CatBoost, MLP
-- **Metrics**: AUC, PR-AUC, F1, Log Loss, Calibration, Brier Score
-- **Hyperparameter Tuning**: Optuna with YAML configuration
+### Machine Learning Models
+- **Logistic Regression** - Baseline (47.8% AUC-ROC)
+- **Random Forest** - 93.2% AUC-ROC
+- **XGBoost** - 94.1% AUC-ROC 🥈
+- **LightGBM** - 93.0% AUC-ROC
+- **CatBoost** - 94.3% AUC-ROC 🥇
+- **MLP Neural Network** - 55.2% AUC-ROC
 
 ### XAI Methods
-- **SHAP**: TreeExplainer, KernelExplainer
-- **LIME**: Tabular explanations
-- **DiCE**: Counterfactual explanations (Phase 2B)
-- **Quantus**: Explanation quality metrics
+| Method | Status | Description |
+|--------|--------|-------------|
+| **SHAP** | ✅ Complete | TreeExplainer for global feature importance |
+| **LIME** | 🔄 In Progress | Local interpretable model-agnostic explanations |
+| **DiCE** | ⏳ Planned | Counterfactual explanations |
+| **Quantus** | ⏳ Planned | Explanation quality metrics |
 
-### Human Study Module
-- **Metrics**: Binary decisions, confidence (1-7), trust (1-7), response time
-- **Design**: Randomized with/without explanations
-- **Target**: 30 participants × 20 transactions = 600 interactions
-
----
-
-## 🔑 Important Notes
-
-### Kaggle Credentials
-- **Status:** ✅ Configured at `~/.kaggle/kaggle.json`
-- **Username:** jaakoob6
-- **Ready to download IEEE-CIS dataset**
-
-### Docker Status
-- **Status:** ❌ Not installed
-- **Impact:** Cannot use docker-compose for easy setup
-- **Solution:** Install Docker Desktop or use manual PostgreSQL/Redis setup
-
-### Next Priority
-- **Install Docker or PostgreSQL/Redis**
-- **Start backend services**
-- **Implement model training utilities**
-- **Test end-to-end model training**
+### Dashboard Features
+- ✅ Model leaderboard with performance metrics
+- ✅ Confusion matrix visualization
+- ✅ Feature importance charts (SHAP)
+- ✅ Real-time explanation generation
+- ✅ Interactive data exploration
+- 🔄 Multi-method comparison (in progress)
 
 ---
 
 ## 🎓 Research Context
 
-This platform supports the Master's thesis:
-> *"Explainable AI in Financial Services: Benchmarking Predictive and Interpretability Performance"*
+**Master's Thesis:**  
+*"Explainable AI in Financial Services: Benchmarking Predictive and Interpretability Performance"*
 
-**Institution**: Nova School of Business and Economics  
-**Focus**: Reproducible XAI evaluation in financial fraud detection  
-**Compliance**: EU AI Act Articles 13 & 14, GDPR
+**Institution:** Nova School of Business and Economics  
+**Supervisor:** [Advisor Name]  
+**Timeline:** 8 weeks to completion  
+
+**Research Questions:**
+1. How do different XAI methods compare in financial fraud detection?
+2. What quantitative metrics best measure explanation quality?
+3. How do human evaluators perceive different explanation methods?
+4. Can we establish a framework for XAI benchmarking in finance?
+
+**Compliance:** EU AI Act Articles 13 & 14, GDPR Article 22
+
+---
+
+## 🤝 Contributing
+
+This is a research project, but contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ---
 
@@ -198,18 +246,22 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🤝 For Next AI Session
+## 🙏 Acknowledgments
 
-**Read these files first:**
-1. `PROJECT_STATUS.md` - Current status
-2. `NEXT_STEPS.md` - What to implement
-3. `QUICK_START.md` - Quick reference
+- **IEEE-CIS Fraud Detection Dataset** - Kaggle competition dataset
+- **SHAP Library** - Scott Lundberg and team
+- **LIME Library** - Marco Tulio Ribeiro and team
+- **FastAPI** - Sebastián Ramírez
+- **Next.js** - Vercel team
 
-**Then:**
-1. Check if Docker is installed
-2. Start backend services
-3. Implement model training utilities
-4. Test with one model (e.g., XGBoost)
+---
+
+## 📧 Contact
+
+**Jakob Lindner**  
+Nova School of Business and Economics  
+Email: [your.email@novasbe.pt]  
+GitHub: [@Jakolo6](https://github.com/Jakolo6)
 
 ---
 
