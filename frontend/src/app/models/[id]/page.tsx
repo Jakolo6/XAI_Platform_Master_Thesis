@@ -44,11 +44,20 @@ export default function ModelDetailPage() {
     }
   }, [isAuthenticated, modelId, router, fetchModelById, fetchModelMetrics]);
 
+  /**
+   * Handle user logout
+   * Clears authentication state and redirects to home page
+   */
   const handleLogout = () => {
     logout();
     router.push('/');
   };
 
+  /**
+   * Generate SHAP explanation for the current model
+   * Polls for completion every 2 seconds for up to 2 minutes
+   * Updates state with explanation results or error messages
+   */
   const handleGenerateExplanation = async () => {
     setIsGeneratingExplanation(true);
     setExplanationError(null);
@@ -89,7 +98,7 @@ export default function ModelDetailPage() {
             setIsGeneratingExplanation(false);
           }
         } catch (error: any) {
-          console.error('Polling error:', error);
+          log('Polling error:', error);
           clearInterval(pollInterval);
           setExplanationError(error.response?.data?.detail || 'Failed to fetch explanation');
           setIsGeneratingExplanation(false);
@@ -97,12 +106,18 @@ export default function ModelDetailPage() {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Generation error:', error);
+      log('Generation error:', error);
       setExplanationError(error.response?.data?.detail || 'Failed to generate explanation');
       setIsGeneratingExplanation(false);
     }
   };
 
+  /**
+   * Generate LIME explanation for the current model
+   * LIME is optimized to run in 3-5 minutes with 200 samples
+   * Provides real-time progress updates with visual feedback
+   * Polls for completion every 2 seconds for up to 5 minutes
+   */
   const handleGenerateLime = async () => {
     setIsGeneratingLime(true);
     setExplanationError(null);
@@ -164,12 +179,12 @@ export default function ModelDetailPage() {
             setExplanationError('LIME generation timed out. Please check back later.');
           }
         } catch (pollError) {
-          console.error('Polling error:', pollError);
+          log('Polling error:', pollError);
         }
       }, 2000);
       
     } catch (error: any) {
-      console.error('LIME generation error:', error);
+      log('LIME generation error:', error);
       setExplanationError(error.response?.data?.detail || 'Failed to generate LIME explanation');
       setIsGeneratingLime(false);
       setLimeProgress('');
