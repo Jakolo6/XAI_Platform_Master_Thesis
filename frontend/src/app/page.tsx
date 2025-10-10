@@ -1,231 +1,246 @@
 /**
- * HOME PAGE - Landing Page
+ * HOME PAGE - Professional Landing Page
  * Route: /
  * 
  * The main landing page of the XAI Platform.
- * Redirects authenticated users to dashboard.
- * Shows welcome message and login button for guests.
+ * Features hero section, features overview, and architecture diagram.
  */
 
-'use client';
-
-import { useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BarChart3, Brain, Shield, Zap } from 'lucide-react';
+import { ArrowRight, BarChart3, Brain, Database, Github, Layers, Shield, Zap, TrendingUp } from 'lucide-react';
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold">XAI Finance</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/login"
-                className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Login
-              </Link>
-              <Link
-                href="/dashboard"
-                className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium inline-flex items-center"
-              >
-                Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="bg-gradient-to-b from-blue-50 via-white to-gray-50">
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Explainable AI in
-            <span className="text-blue-600"> Financial Services</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            A comprehensive research platform for benchmarking explainable AI (XAI) methods
-            in financial fraud detection. Compare models, generate explanations, and conduct
-            human studies.
-          </p>
-          <div className="flex justify-center space-x-4">
-            <Link
-              href="/dashboard"
-              className="bg-blue-600 text-white hover:bg-blue-700 px-8 py-3 rounded-lg text-lg font-medium inline-flex items-center"
-            >
-              View Dashboard
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            <Link
-              href="/models"
-              className="bg-white text-blue-600 hover:bg-gray-50 border-2 border-blue-600 px-8 py-3 rounded-lg text-lg font-medium"
-            >
-              Explore Models
-            </Link>
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="text-3xl font-bold text-blue-600 mb-2">6</div>
-            <div className="text-gray-600">ML Models Trained</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="text-3xl font-bold text-green-600 mb-2">94.3%</div>
-            <div className="text-gray-600">Best AUC-ROC Score</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="text-3xl font-bold text-purple-600 mb-2">270k</div>
-            <div className="text-gray-600">Training Samples</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="text-3xl font-bold text-orange-600 mb-2">452</div>
-            <div className="text-gray-600">Engineered Features</div>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-12">Platform Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Model Benchmarking</h3>
-              <p className="text-gray-600">
-                Compare 6 different ML algorithms with comprehensive metrics and visualizations.
-              </p>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Brain className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">XAI Explanations</h3>
-              <p className="text-gray-600">
-                Generate SHAP and LIME explanations to understand model predictions.
-              </p>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Fraud Detection</h3>
-              <p className="text-gray-600">
-                Real-world IEEE-CIS dataset with 590k fraud transactions.
-              </p>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="bg-orange-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Fast Training</h3>
-              <p className="text-gray-600">
-                XGBoost trains in 8 seconds with 94.1% AUC-ROC performance.
-              </p>
+      <section className="relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32">
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-6xl font-bold text-gray-900 mb-6">
+              Explainable AI Benchmark Platform
+              <br />
+              <span className="bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                for Financial Services
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              A research initiative to evaluate the performance and interpretability of AI models 
+              in finance using real-world datasets and open-source explainability methods.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/register"
+                className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              >
+                Try the Demo
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+              <a
+                href="https://github.com/Jakolo6/XAI_Platform_Master_Thesis"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-8 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <Github className="mr-2 h-5 w-5" />
+                View Code
+              </a>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Models Overview */}
-        <div className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-12">Trained Models</h2>
-          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Model
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    AUC-ROC
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    F1 Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Training Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">🥇</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">CatBoost</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.943</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.717</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">231.8s</td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">🥈</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">XGBoost</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.941</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.697</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">8.1s ⚡</td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">🥉</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">Random Forest</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.932</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.659</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">32.5s</td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">#4</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">LightGBM</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.930</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">0.643</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">47.7s</td>
-                </tr>
-              </tbody>
-            </table>
+      {/* Features Section */}
+      <section id="features" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Platform Features
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Everything you need to benchmark and evaluate explainability algorithms 
+              on real-world financial datasets.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-xl border border-blue-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mb-4">
+                <BarChart3 className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Benchmark XAI Algorithms
+              </h3>
+              <p className="text-gray-600">
+                Compare SHAP, LIME, and other state-of-the-art explainability methods 
+                across multiple datasets and metrics.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-gradient-to-br from-green-50 to-white p-8 rounded-xl border border-green-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-4">
+                <Database className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Dataset Flexibility
+              </h3>
+              <p className="text-gray-600">
+                Plug in IEEE-CIS Fraud Detection, German Credit, Give Me Some Credit, 
+                and more financial datasets with ease.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-gradient-to-br from-purple-50 to-white p-8 rounded-xl border border-purple-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mb-4">
+                <Layers className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Supabase Integration
+              </h3>
+              <p className="text-gray-600">
+                Persistent research results and experiment tracking powered by 
+                Supabase for reliable cloud storage.
+              </p>
+            </div>
+          </div>
+
+          {/* Additional Features */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+            {/* Feature 4 */}
+            <div className="bg-gradient-to-br from-orange-50 to-white p-8 rounded-xl border border-orange-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-orange-600 rounded-lg flex items-center justify-center mb-4">
+                <Brain className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Multiple ML Models
+              </h3>
+              <p className="text-gray-600">
+                Train and compare XGBoost, Random Forest, Neural Networks, and more 
+                on your datasets.
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="bg-gradient-to-br from-red-50 to-white p-8 rounded-xl border border-red-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mb-4">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Reproducible Research
+              </h3>
+              <p className="text-gray-600">
+                All experiments are tracked and versioned, ensuring reproducibility 
+                for academic research.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="bg-gradient-to-br from-indigo-50 to-white p-8 rounded-xl border border-indigo-100 hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mb-4">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Performance Metrics
+              </h3>
+              <p className="text-gray-600">
+                Comprehensive evaluation with AUC-ROC, precision, recall, and 
+                explainability-specific metrics.
+              </p>
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* CTA */}
-        <div className="mt-20 bg-blue-600 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-3xl font-bold mb-4">Ready to Explore?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Access the full platform to view detailed metrics, compare models, and generate explanations.
+      {/* Architecture Section */}
+      <section id="architecture" className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Platform Architecture
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Modern, scalable architecture built with industry-leading technologies.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              {/* Frontend */}
+              <div className="text-center">
+                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Zap className="h-10 w-10 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Frontend</h3>
+                <p className="text-gray-600 mb-4">Next.js 15 + React</p>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• TypeScript</li>
+                  <li>• TailwindCSS</li>
+                  <li>• shadcn/ui</li>
+                </ul>
+              </div>
+
+              {/* Arrow */}
+              <div className="hidden md:flex justify-center">
+                <ArrowRight className="h-8 w-8 text-gray-400" />
+              </div>
+
+              {/* Backend */}
+              <div className="text-center">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Layers className="h-10 w-10 text-green-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Backend</h3>
+                <p className="text-gray-600 mb-4">FastAPI + Python</p>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• Async/Await</li>
+                  <li>• ML Pipeline</li>
+                  <li>• XAI Methods</li>
+                </ul>
+              </div>
+
+              {/* Arrow */}
+              <div className="hidden md:flex justify-center md:col-start-2">
+                <ArrowRight className="h-8 w-8 text-gray-400" />
+              </div>
+
+              {/* Database */}
+              <div className="text-center md:col-start-3">
+                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Database className="h-10 w-10 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Database</h3>
+                <p className="text-gray-600 mb-4">Supabase</p>
+                <ul className="text-sm text-gray-500 space-y-1">
+                  <li>• PostgreSQL</li>
+                  <li>• Auth</li>
+                  <li>• Storage</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
+            Ready to Start Benchmarking?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join researchers worldwide in advancing explainable AI for financial services.
           </p>
           <Link
-            href="/dashboard"
-            className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 rounded-lg text-lg font-medium inline-flex items-center"
+            href="/register"
+            className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 transition-colors"
           >
-            Go to Dashboard
+            Get Started Free
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center text-gray-600">
-            <p className="mb-2">XAI Finance Benchmark Platform</p>
-            <p className="text-sm">
-              Master's Thesis - Nova School of Business and Economics
-            </p>
-            <p className="text-sm mt-2">
-              Built with Next.js 15, TypeScript, and TailwindCSS
-            </p>
-          </div>
-        </div>
-      </footer>
+      </section>
     </div>
   );
 }

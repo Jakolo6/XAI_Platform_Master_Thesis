@@ -1,16 +1,16 @@
 /**
- * LOGIN PAGE
- * Route: /login
+ * REGISTER PAGE
+ * Route: /register
  * 
- * User login page with Supabase authentication
+ * User registration page with Supabase authentication
  */
 
 import AuthForm from '@/components/AuthForm'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <AuthForm mode="login" />
+      <AuthForm mode="register" />
     </div>
   )
 }
