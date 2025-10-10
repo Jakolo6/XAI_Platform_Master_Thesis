@@ -80,6 +80,12 @@ async def get_model_explanations(model_id: str):
     return explanations
 
 
+@router.get("/compare")
+async def compare_explanations_query(model_id: str):
+    """Compare SHAP and LIME explanations for a model (query parameter version)."""
+    return await compare_explanations(model_id)
+
+
 @router.get("/compare/{model_id}")
 async def compare_explanations(model_id: str):
     """Compare SHAP and LIME explanations for a model."""
