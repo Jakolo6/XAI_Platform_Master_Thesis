@@ -89,21 +89,31 @@ def generate_explanation(
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found: {model_path}")
         
-        # Load background data (sample from validation set)
-        dataset_id = model.dataset_id
-        val_data_path = Path(f"data/processed/{dataset_id}/validation.csv")
+        # Load background data using dataset loader
+        from app.datasets.registry import get_dataset_registry
+        from app.datasets.loaders import get_loader
         
-        if not val_data_path.exists():
-            raise FileNotFoundError(f"Validation data not found: {val_data_path}")
+        # Get dataset configuration
+        registry = get_dataset_registry()
+        dataset_config = registry.get_dataset_config(dataset_id)
         
-        # Load validation data
-        val_df = pd.read_csv(val_data_path)
+        if not dataset_config:
+            raise ValueError(f"Dataset not found: {dataset_id}")
+        
+        # Get loader and load splits
+        loader = get_loader(dataset_id, dataset_config)
+        
+        if not loader.splits_exist():
+            raise ValueError(f"Dataset splits not found for {dataset_id}")
+        
+        train_df, val_df, test_df = loader.load_splits()
+        
+        # Get target column from config
+        target_col = loader.get_target_column()
         
         # Separate features and target
-        if 'isFraud' in val_df.columns:
-            X_val = val_df.drop('isFraud', axis=1)
-        else:
-            X_val = val_df
+        X_val = val_df.drop(columns=[target_col])
+        y_val = val_df[target_col]
         
         # Sample background data (100 samples for efficiency)
         background_data = X_val.sample(min(100, len(X_val)), random_state=42)
@@ -167,6 +177,38 @@ def generate_explanation(
                 3600,
                 json.dumps(explanation_data)
             )
+        
+        # Also save to Supabase
+        try:
+            from app.supabase.client import get_supabase_client
+            supabase = get_supabase_client()
+            
+            # Get dataset UUID from Supabase
+            datasets = supabase.get_datasets(is_active=False)
+            supabase_dataset = next((d for d in datasets if d['name'] == dataset_id), None)
+            dataset_uuid = supabase_dataset['id'] if supabase_dataset else None
+            
+            # Extract summary data
+            feature_importance = explanation_result.get('feature_importance', [])
+            top_features = feature_importance[:10] if feature_importance else []
+            
+            # Save explanation to Supabase
+            supabase.insert_explanation({
+                'id': explanation_id,
+                'model_id': model_id,
+                'dataset_id': dataset_uuid,
+                'method': method,
+                'type': 'global' if not config.get('instance_data') else 'local',
+                'summary_json': explanation_result,
+                'top_features': top_features,
+                'feature_importance': {f['feature']: f['importance'] for f in feature_importance} if feature_importance else {},
+                'num_samples': len(X_val),
+                'num_features': len(X_val.columns)
+            })
+            
+            logger.info("Explanation saved to Supabase", explanation_id=explanation_id)
+        except Exception as e:
+            logger.warning("Failed to save explanation to Supabase", error=str(e))
         
         logger.info("Explanation generation complete",
                    explanation_id=explanation_id,
@@ -281,18 +323,26 @@ def evaluate_explanation_quality_task(self, eval_id: str, explanation_id: str) -
         with open(model_path, 'rb') as f:
             loaded_model = pickle.load(f)
         
-        # Load test data
+        # Load test data using dataset loader
+        from app.datasets.registry import get_dataset_registry
+        from app.datasets.loaders import get_loader
+        
         dataset_id = model.dataset_id
-        test_data_path = Path(f"data/processed/{dataset_id}/test.csv")
-        test_df = pd.read_csv(test_data_path)
+        registry = get_dataset_registry()
+        dataset_config = registry.get_dataset_config(dataset_id)
+        
+        if not dataset_config:
+            raise ValueError(f"Dataset not found: {dataset_id}")
+        
+        loader = get_loader(dataset_id, dataset_config)
+        train_df, val_df, test_df = loader.load_splits()
+        
+        # Get target column
+        target_col = loader.get_target_column()
         
         # Separate features and target
-        if 'isFraud' in test_df.columns:
-            X_test = test_df.drop('isFraud', axis=1)
-            y_test = test_df['isFraud']
-        else:
-            X_test = test_df
-            y_test = pd.Series([0] * len(test_df))
+        X_test = test_df.drop(columns=[target_col])
+        y_test = test_df[target_col]
         
         # Sample for evaluation (use 100 samples)
         sample_size = min(100, len(X_test))

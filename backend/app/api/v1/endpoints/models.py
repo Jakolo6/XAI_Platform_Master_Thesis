@@ -63,6 +63,27 @@ async def train_new_model(
     """
     Train a new model.
     """
+    # Validate dataset exists
+    from app.datasets.registry import get_dataset_registry
+    registry = get_dataset_registry()
+    dataset_config = registry.get_dataset_config(request.dataset_id)
+    
+    if not dataset_config:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset not found: {request.dataset_id}"
+        )
+    
+    # Check if dataset is processed
+    from app.datasets.loaders import get_loader
+    loader = get_loader(request.dataset_id, dataset_config)
+    
+    if not loader.splits_exist():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dataset not processed. Run: python scripts/process_dataset.py {request.dataset_id}"
+        )
+    
     # Create model entry
     model_id = str(uuid.uuid4())
     new_model = Model(
@@ -106,6 +127,7 @@ async def list_models(
     skip: int = 0,
     limit: int = 100,
     model_type: Optional[str] = None,
+    dataset_id: Optional[str] = None,
     status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_researcher)
@@ -117,6 +139,8 @@ async def list_models(
     
     if model_type:
         query = query.where(Model.model_type == model_type)
+    if dataset_id:
+        query = query.where(Model.dataset_id == dataset_id)
     if status:
         query = query.where(Model.status == status)
     

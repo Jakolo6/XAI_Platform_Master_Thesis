@@ -38,15 +38,24 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     logger.info("Starting application", app_name=settings.APP_NAME, version=settings.APP_VERSION)
-    await init_db()
-    logger.info("Database initialized")
+    
+    # Try to initialize database, but don't fail if PostgreSQL is not available
+    # (We're using Supabase for metadata storage)
+    try:
+        await init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.warning("Database initialization failed (using Supabase instead)", error=str(e))
     
     yield
     
     # Shutdown
     logger.info("Shutting down application")
-    await close_db()
-    logger.info("Database connections closed")
+    try:
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.warning("Database close failed", error=str(e))
 
 
 # Create FastAPI app

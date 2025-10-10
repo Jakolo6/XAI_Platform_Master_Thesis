@@ -1,0 +1,333 @@
+'use client';
+
+import { useState } from 'react';
+import { DatasetSelector } from '@/components/datasets/DatasetSelector';
+import { Play, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { modelsAPI } from '@/lib/api';
+
+export default function TrainModelPage() {
+  const [step, setStep] = useState(1);
+  const [selectedDataset, setSelectedDataset] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [hyperparameters, setHyperparameters] = useState<Record<string, any>>({});
+  const [training, setTraining] = useState(false);
+  const [trainingResult, setTrainingResult] = useState<any>(null);
+
+  const modelTypes = [
+    { 
+      id: 'xgboost', 
+      name: 'XGBoost', 
+      description: 'Fast gradient boosting',
+      recommended: true,
+      speed: 'Fast',
+      accuracy: 'High'
+    },
+    { 
+      id: 'lightgbm', 
+      name: 'LightGBM', 
+      description: 'Light gradient boosting',
+      recommended: true,
+      speed: 'Very Fast',
+      accuracy: 'High'
+    },
+    { 
+      id: 'catboost', 
+      name: 'CatBoost', 
+      description: 'Categorical boosting',
+      recommended: false,
+      speed: 'Medium',
+      accuracy: 'High'
+    },
+    { 
+      id: 'random_forest', 
+      name: 'Random Forest', 
+      description: 'Ensemble of trees',
+      recommended: false,
+      speed: 'Medium',
+      accuracy: 'Medium'
+    },
+    { 
+      id: 'logistic_regression', 
+      name: 'Logistic Regression', 
+      description: 'Linear model',
+      recommended: false,
+      speed: 'Very Fast',
+      accuracy: 'Low'
+    },
+    { 
+      id: 'mlp', 
+      name: 'Neural Network', 
+      description: 'Multi-layer perceptron',
+      recommended: false,
+      speed: 'Slow',
+      accuracy: 'Medium'
+    },
+  ];
+
+  const handleTrain = async () => {
+    setTraining(true);
+    try {
+      // Real API call to backend
+      const response = await modelsAPI.train({
+        name: `${selectedModel}_${selectedDataset}`,
+        dataset_id: selectedDataset,
+        model_type: selectedModel,
+        hyperparameters: hyperparameters
+      });
+
+      const result = response.data;
+      setTrainingResult(result);
+      
+      alert(`Training started!\n\nModel ID: ${result.model_id}\nTask ID: ${result.task_id}\n\nCheck the models page to monitor progress.`);
+    } catch (error: any) {
+      console.error('Training failed:', error);
+      const errorMsg = error.response?.data?.detail || 'Failed to start training. Make sure the backend is running and the dataset is processed.';
+      alert(errorMsg);
+    } finally {
+      setTraining(false);
+    }
+  };
+
+  const canProceed = (currentStep: number) => {
+    if (currentStep === 1) return selectedDataset !== '';
+    if (currentStep === 2) return selectedModel !== '';
+    return true;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Train New Model</h1>
+          <p className="text-gray-600 mt-2">
+            Follow the steps to train a model on your selected dataset
+          </p>
+        </div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center mb-12">
+          {[1, 2, 3].map((s, idx) => (
+            <div key={s} className="flex items-center">
+              <div className={`
+                flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg
+                transition-all duration-300
+                ${step >= s 
+                  ? 'bg-blue-600 text-white shadow-lg' 
+                  : 'bg-gray-200 text-gray-600'
+                }
+              `}>
+                {step > s ? <CheckCircle2 className="h-6 w-6" /> : s}
+              </div>
+              
+              {idx < 2 && (
+                <div className={`
+                  w-24 h-1 mx-2 transition-all duration-300
+                  ${step > s ? 'bg-blue-600' : 'bg-gray-200'}
+                `} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Step Content */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          {/* Step 1: Select Dataset */}
+          {step === 1 && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Step 1: Select Dataset
+                </h2>
+                <p className="text-gray-600">
+                  Choose a dataset to train your model on
+                </p>
+              </div>
+
+              <DatasetSelector
+                onSelect={setSelectedDataset}
+                selectedId={selectedDataset}
+              />
+
+              {selectedDataset && (
+                <div className="mt-8 flex justify-end">
+                  <button
+                    onClick={() => setStep(2)}
+                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Continue
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Select Model */}
+          {step === 2 && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Step 2: Select Model Type
+                </h2>
+                <p className="text-gray-600">
+                  Choose the algorithm to train
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {modelTypes.map(model => (
+                  <div
+                    key={model.id}
+                    onClick={() => setSelectedModel(model.id)}
+                    className={`
+                      relative p-6 rounded-lg border-2 cursor-pointer transition-all
+                      hover:shadow-lg hover:scale-[1.02]
+                      ${selectedModel === model.id 
+                        ? 'border-blue-500 bg-blue-50 shadow-md' 
+                        : 'border-gray-200 hover:border-blue-300'
+                      }
+                    `}
+                  >
+                    {model.recommended && (
+                      <div className="absolute top-2 right-2">
+                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
+                          Recommended
+                        </span>
+                      </div>
+                    )}
+
+                    <h3 className="font-bold text-lg text-gray-900 mb-2">
+                      {model.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      {model.description}
+                    </p>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Speed:</span>
+                        <span className="font-medium">{model.speed}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Accuracy:</span>
+                        <span className="font-medium">{model.accuracy}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 flex justify-between">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  Back
+                </button>
+                {selectedModel && (
+                  <button
+                    onClick={() => setStep(3)}
+                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Continue
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirm & Train */}
+          {step === 3 && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Step 3: Confirm & Train
+                </h2>
+                <p className="text-gray-600">
+                  Review your selections and start training
+                </p>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Training Configuration</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Dataset:</span>
+                    <span className="font-medium text-gray-900">{selectedDataset}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Model Type:</span>
+                    <span className="font-medium text-gray-900">
+                      {modelTypes.find(m => m.id === selectedModel)?.name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Hyperparameters:</span>
+                    <span className="font-medium text-gray-900">Default</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Command Preview */}
+              <div className="bg-gray-900 rounded-lg p-4 mb-6">
+                <div className="text-gray-400 text-sm mb-2">Command to run:</div>
+                <div className="text-green-400 font-mono text-sm">
+                  python scripts/train_model_simple.py {selectedDataset} {selectedModel}
+                </div>
+              </div>
+
+              {/* Training Result */}
+              {trainingResult && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-green-900 mb-1">Training Started!</p>
+                      <p className="text-sm text-green-700">
+                        Model ID: <code className="bg-green-100 px-1 rounded">{trainingResult.model_id}</code>
+                      </p>
+                      <p className="text-sm text-green-700 mt-1">
+                        Check the models page to monitor progress.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setStep(2)}
+                  disabled={training}
+                  className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  Back
+                </button>
+                <button
+                  onClick={handleTrain}
+                  disabled={training}
+                  className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Play className="h-5 w-5 mr-2" />
+                  {training ? 'Starting Training...' : 'Start Training'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Help Text */}
+        <div className="mt-6 text-center text-sm text-gray-600">
+          <p>
+            Training will run in the background. You can monitor progress in the Models page.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -66,14 +66,29 @@ def train_model(
         
         update_status_sync(ModelStatus.TRAINING)
         
-        # Load dataset
-        data_dir = Path(f"data/processed/{dataset_id}")
-        train_df = pd.read_csv(data_dir / "train.csv")
-        val_df = pd.read_csv(data_dir / "validation.csv")
-        test_df = pd.read_csv(data_dir / "test.csv")
+        # Load dataset using dataset loader
+        from app.datasets.registry import get_dataset_registry
+        from app.datasets.loaders import get_loader
+        
+        # Get dataset configuration
+        registry = get_dataset_registry()
+        dataset_config = registry.get_dataset_config(dataset_id)
+        
+        if not dataset_config:
+            raise ValueError(f"Dataset not found: {dataset_id}")
+        
+        # Get loader and load splits
+        loader = get_loader(dataset_id, dataset_config)
+        
+        if not loader.splits_exist():
+            raise ValueError(f"Dataset splits not found. Run: python scripts/process_dataset.py {dataset_id}")
+        
+        train_df, val_df, test_df = loader.load_splits()
+        
+        # Get target column from config
+        target_col = loader.get_target_column()
         
         # Separate features and target
-        target_col = "isFraud"
         X_train = train_df.drop(columns=[target_col])
         y_train = train_df[target_col]
         X_val = val_df.drop(columns=[target_col])
@@ -121,7 +136,7 @@ def train_model(
         # Get model file size
         model_size_mb = Path(model_path).stat().st_size / (1024 * 1024)
         
-        # Update database
+        # Update database (PostgreSQL)
         def save_results_sync():
             with SyncSession() as db:
                 # Update model
@@ -151,6 +166,40 @@ def train_model(
                     db.commit()
         
         save_results_sync()
+        
+        # Also save to Supabase
+        try:
+            from app.supabase.client import get_supabase_client
+            supabase = get_supabase_client()
+            
+            # Insert model
+            supabase.insert_model({
+                'id': model_id,
+                'name': f"{model_type}_{dataset_id}",
+                'model_type': model_type,
+                'version': '1.0.0',
+                'dataset_id': dataset_id,
+                'hyperparameters': trainer.hyperparameters,
+                'training_config': {
+                    'optimized': optimize,
+                    'optimization_results': optimization_results
+                } if optimization_results else None,
+                'model_path': storage_path,
+                'model_hash': model_hash,
+                'model_size_mb': model_size_mb,
+                'training_time_seconds': training_results["training_time_seconds"],
+                'status': 'completed',
+            })
+            
+            # Insert metrics
+            supabase.insert_model_metrics({
+                'model_id': model_id,
+                **metrics
+            })
+            
+            logger.info("Results saved to Supabase", model_id=model_id)
+        except Exception as e:
+            logger.warning("Failed to save to Supabase", error=str(e))
         
         logger.info("Model training complete",
                    model_id=model_id,

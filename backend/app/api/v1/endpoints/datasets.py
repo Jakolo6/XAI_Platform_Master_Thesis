@@ -42,38 +42,41 @@ class DatasetResponse(BaseModel):
     processed_at: str = None
 
 
-@router.get("/", response_model=List[DatasetResponse])
+@router.get("/")
 async def list_datasets(
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_researcher)
 ):
     """
-    List all datasets.
+    List all datasets from Supabase.
     """
-    result = await db.execute(
-        select(Dataset)
-        .offset(skip)
-        .limit(limit)
-        .order_by(Dataset.created_at.desc())
-    )
-    datasets = result.scalars().all()
-    
-    return [
-        DatasetResponse(
-            id=str(dataset.id),
-            name=dataset.name,
-            description=dataset.description,
-            source=dataset.source,
-            status=dataset.status,
-            total_rows=dataset.total_rows,
-            total_columns=dataset.total_columns,
-            created_at=dataset.created_at.isoformat(),
-            processed_at=dataset.processed_at.isoformat() if dataset.processed_at else None
-        )
-        for dataset in datasets
-    ]
+    try:
+        from app.supabase.client import get_supabase_client
+        supabase = get_supabase_client()
+        datasets = supabase.get_datasets(is_active=True)
+        
+        # Convert to response format
+        return datasets
+    except Exception as e:
+        logger.error("Failed to fetch datasets", error=str(e))
+        # Fallback: return datasets from registry
+        from app.datasets.registry import get_dataset_registry
+        registry = get_dataset_registry()
+        datasets = []
+        for dataset_id, config in registry.datasets.items():
+            datasets.append({
+                "id": dataset_id,
+                "name": dataset_id,
+                "display_name": config.get("display_name", dataset_id),
+                "description": config.get("description", ""),
+                "total_samples": config.get("total_samples", 0),
+                "num_features": config.get("num_features", 0),
+                "status": "completed",
+                "tags": config.get("tags", []),
+                "class_balance": config.get("class_balance", {})
+            })
+        return datasets
 
 
 @router.post("/", response_model=DatasetResponse)

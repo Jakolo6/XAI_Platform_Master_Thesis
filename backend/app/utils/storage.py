@@ -30,7 +30,7 @@ class StorageClient:
             self.client = None
             return
         
-        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_ROLE_KEY:
+        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_KEY:
             logger.warning("Supabase credentials not configured, using local storage fallback")
             self.client = None
             return
@@ -38,7 +38,7 @@ class StorageClient:
         try:
             self.client: Optional[Client] = create_client(
                 settings.SUPABASE_URL,
-                settings.SUPABASE_SERVICE_ROLE_KEY
+                settings.SUPABASE_SERVICE_KEY
             )
             logger.info("Supabase storage client initialized")
         except Exception as e:

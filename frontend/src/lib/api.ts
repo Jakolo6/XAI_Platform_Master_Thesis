@@ -123,4 +123,14 @@ export const explanationsAPI = {
   getQuality: (evalId: string) => api.get(`/explanations/quality/${evalId}`),
 };
 
+export const benchmarksAPI = {
+  getAll: () => api.get('/benchmarks/'),
+  
+  compare: (params?: { dataset_ids?: string; model_types?: string; metric?: string }) =>
+    api.get('/benchmarks/compare', { params }),
+  
+  getLeaderboard: (metric: string = 'auc_roc', limit: number = 10) =>
+    api.get('/benchmarks/leaderboard', { params: { metric, limit } }),
+};
+
 export default api;

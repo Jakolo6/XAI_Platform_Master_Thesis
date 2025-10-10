@@ -25,10 +25,13 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from sklearn.calibration import calibration_curve
-import xgboost as xgb
-import lightgbm as lgb
-import catboost as cb
-import optuna
+
+# Lazy imports for libraries that may have dependencies
+# These will be imported only when the specific model type is used
+xgb = None
+lgb = None
+cb = None
+optuna = None
 
 from app.core.config import settings, MODEL_CONFIGS
 
@@ -63,15 +66,26 @@ class ModelTrainer:
         
     def _create_model(self):
         """Create model instance based on type."""
+        global xgb, lgb, cb
+        
         if self.model_type == "logistic_regression":
             return LogisticRegression(**self.hyperparameters)
         elif self.model_type == "random_forest":
             return RandomForestClassifier(**self.hyperparameters)
         elif self.model_type == "xgboost":
+            if xgb is None:
+                import xgboost as xgb_module
+                xgb = xgb_module
             return xgb.XGBClassifier(**self.hyperparameters)
         elif self.model_type == "lightgbm":
+            if lgb is None:
+                import lightgbm as lgb_module
+                lgb = lgb_module
             return lgb.LGBMClassifier(**self.hyperparameters)
         elif self.model_type == "catboost":
+            if cb is None:
+                import catboost as cb_module
+                cb = cb_module
             return cb.CatBoostClassifier(**self.hyperparameters)
         elif self.model_type == "mlp":
             return MLPClassifier(**self.hyperparameters)
@@ -118,6 +132,9 @@ class ModelTrainer:
                         verbose=False
                     )
                 elif self.model_type == "lightgbm":
+                    if lgb is None:
+                        import lightgbm as lgb_module
+                        lgb = lgb_module
                     self.model.fit(
                         X_train, y_train,
                         eval_set=eval_set,
