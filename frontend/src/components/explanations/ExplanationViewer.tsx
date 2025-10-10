@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Brain, Sparkles, TrendingUp, AlertCircle } from 'lucide-react';
+import { Brain, Sparkles, TrendingUp, AlertCircle, Download, FileJson, Database } from 'lucide-react';
 import FeatureImportanceChart from '../charts/FeatureImportanceChart';
 import ShapWaterfallChart from '../charts/ShapWaterfallChart';
+import { exportAsJSON } from '@/utils/export';
 
 interface ExplanationViewerProps {
   explanation: {
@@ -38,6 +39,12 @@ interface ExplanationViewerProps {
 
 export default function ExplanationViewer({ explanation, type }: ExplanationViewerProps) {
   const [showAllFeatures, setShowAllFeatures] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
+
+  const handleExportJSON = () => {
+    const filename = `explanation_${type}_${new Date().toISOString().split('T')[0]}.json`;
+    exportAsJSON(explanation, filename);
+  };
 
   if (type === 'instance' && explanation.prediction) {
     // Individual instance explanation
@@ -141,6 +148,17 @@ export default function ExplanationViewer({ explanation, type }: ExplanationView
 
   return (
     <div className="space-y-6">
+      {/* Export Button */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleExportJSON}
+          className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          <FileJson className="h-4 w-4 mr-2" />
+          Export JSON
+        </button>
+      </div>
+
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg border p-6">
@@ -202,6 +220,28 @@ export default function ExplanationViewer({ explanation, type }: ExplanationView
             >
               {showAllFeatures ? 'Show Top 20' : `Show All ${explanation.feature_importance?.length} Features`}
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Raw Data Viewer */}
+      <div className="bg-white rounded-lg border">
+        <div className="px-6 py-4 border-b flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Raw Data</h3>
+          <button
+            onClick={() => setShowRawData(!showRawData)}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >
+            {showRawData ? 'Hide' : 'Show'} Raw Data
+          </button>
+        </div>
+        {showRawData && (
+          <div className="p-6">
+            <div className="bg-gray-50 rounded-lg p-4 overflow-auto max-h-96">
+              <pre className="text-xs text-gray-800">
+                {JSON.stringify(explanation, null, 2)}
+              </pre>
+            </div>
           </div>
         )}
       </div>
