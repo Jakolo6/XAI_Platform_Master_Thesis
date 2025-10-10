@@ -10,6 +10,7 @@ import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } fro
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
 import ExplanationViewer from '@/components/explanations/ExplanationViewer';
+import QualityMetrics from '@/components/explanations/QualityMetrics';
 import { explanationsAPI } from '@/lib/api';
 import { exportSHAPToCSV, exportLIMEToCSV } from '@/utils/export';
 
@@ -33,6 +34,9 @@ export default function ModelDetailPage() {
   const [limeProgress, setLimeProgress] = useState<string>('');
   const [limeTaskId, setLimeTaskId] = useState<string | null>(null);
   const [explanationError, setExplanationError] = useState<string | null>(null);
+  const [qualityMetrics, setQualityMetrics] = useState<any>(null);
+  const [isLoadingQuality, setIsLoadingQuality] = useState(false);
+  const [showQualityMetrics, setShowQualityMetrics] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -112,6 +116,49 @@ export default function ModelDetailPage() {
       setIsGeneratingExplanation(false);
     }
   };
+
+  /**
+   * Load quality metrics for current explanation
+   */
+  const loadQualityMetrics = async () => {
+    const currentExplanation = selectedMethod === 'shap' ? shapExplanation : limeExplanation;
+    if (!currentExplanation) return;
+
+    setIsLoadingQuality(true);
+    try {
+      // Generate demo quality metrics based on method
+      // In a real implementation, this would call the backend API
+      const demoMetrics = {
+        faithfulness: {
+          monotonicity: selectedMethod === 'shap' ? 0.85 : 0.78,
+          selectivity: selectedMethod === 'shap' ? 4.2 : 3.8,
+        },
+        robustness: {
+          stability: selectedMethod === 'shap' ? 0.92 : 0.81,
+          stability_std: selectedMethod === 'shap' ? 0.05 : 0.08,
+        },
+        complexity: {
+          sparsity: selectedMethod === 'shap' ? 0.27 : 0.32,
+          gini_coefficient: selectedMethod === 'shap' ? 0.73 : 0.68,
+          effective_features: selectedMethod === 'shap' ? 15 : 18,
+        },
+        overall_quality: selectedMethod === 'shap' ? 0.85 : 0.78,
+      };
+      
+      setQualityMetrics(demoMetrics);
+    } catch (error) {
+      log('Failed to load quality metrics:', error);
+    } finally {
+      setIsLoadingQuality(false);
+    }
+  };
+
+  // Auto-load quality metrics when showing them
+  useEffect(() => {
+    if (showQualityMetrics && !qualityMetrics) {
+      loadQualityMetrics();
+    }
+  }, [showQualityMetrics]);
 
   /**
    * Generate LIME explanation for the current model
@@ -544,6 +591,48 @@ export default function ModelDetailPage() {
                     type="global"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Quality Metrics Section */}
+            {(shapExplanation || limeExplanation) && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="px-6 py-4 border-b flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Explanation Quality Metrics</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Evaluate the quality of {selectedMethod === 'shap' ? 'SHAP' : 'LIME'} explanations
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowQualityMetrics(!showQualityMetrics)}
+                    className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {showQualityMetrics ? 'Hide' : 'Show'} Quality Metrics
+                  </button>
+                </div>
+                {showQualityMetrics && (
+                  <div className="p-6">
+                    {isLoadingQuality ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                        <span className="ml-3 text-gray-600">Loading quality metrics...</span>
+                      </div>
+                    ) : qualityMetrics ? (
+                      <QualityMetrics metrics={qualityMetrics} method={selectedMethod} />
+                    ) : (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                        <p className="text-blue-800 mb-4">
+                          Quality metrics provide insights into the reliability and interpretability of explanations.
+                        </p>
+                        <p className="text-sm text-blue-600">
+                          Note: Quality metrics are computed using demo data for this prototype.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
