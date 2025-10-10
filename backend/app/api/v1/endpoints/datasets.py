@@ -49,18 +49,11 @@ async def list_datasets(
     current_user: str = Depends(get_current_researcher)
 ):
     """
-    List all datasets from Supabase.
+    List all datasets from registry.
+    Uses config/datasets.yaml as the source of truth.
     """
     try:
-        from app.supabase.client import get_supabase_client
-        supabase = get_supabase_client()
-        datasets = supabase.get_datasets(is_active=True)
-        
-        # Convert to response format
-        return datasets
-    except Exception as e:
-        logger.error("Failed to fetch datasets", error=str(e))
-        # Fallback: return datasets from registry
+        # Primary source: registry (config/datasets.yaml)
         from app.datasets.registry import get_dataset_registry
         registry = get_dataset_registry()
         datasets = []
@@ -77,6 +70,9 @@ async def list_datasets(
                 "class_balance": config.get("class_balance", {})
             })
         return datasets
+    except Exception as e:
+        logger.error("Failed to fetch datasets from registry", error=str(e))
+        return []
 
 
 @router.post("/", response_model=DatasetResponse)
