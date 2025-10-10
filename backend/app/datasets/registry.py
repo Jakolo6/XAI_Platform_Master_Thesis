@@ -18,9 +18,17 @@ class DatasetRegistry:
             config_path: Path to datasets.yaml file. If None, uses default location.
         """
         if config_path is None:
-            # Default path: config/datasets.yaml from project root
+            # Try backend/config first (for Railway deployment), then project root
             backend_dir = Path(__file__).parent.parent.parent
-            config_path = backend_dir.parent / "config" / "datasets.yaml"
+            backend_config = backend_dir / "config" / "datasets.yaml"
+            root_config = backend_dir.parent / "config" / "datasets.yaml"
+            
+            if backend_config.exists():
+                config_path = backend_config
+            elif root_config.exists():
+                config_path = root_config
+            else:
+                config_path = backend_config  # Use backend path as default
         
         self.config_path = Path(config_path)
         self.datasets = self._load_registry()

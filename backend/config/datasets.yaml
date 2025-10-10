@@ -1,0 +1,164 @@
+# ============================================================
+# XAI PLATFORM - DATASET REGISTRY
+# ============================================================
+# This file defines all available datasets for the platform.
+# Each dataset includes configuration for downloading, preprocessing,
+# and training models.
+# ============================================================
+
+datasets:
+  # ============================================================
+  # IEEE-CIS FRAUD DETECTION
+  # ============================================================
+  - id: ieee-cis-fraud
+    name: ieee-cis-fraud
+    display_name: "IEEE-CIS Fraud Detection"
+    description: "IEEE Computational Intelligence Society fraud detection dataset from Kaggle. Contains transaction data with 590K samples and 400+ features."
+    
+    # Source
+    source: kaggle
+    kaggle_competition: ieee-fraud-detection
+    
+    # Configuration
+    target_column: isFraud
+    positive_class: 1
+    
+    # Split ratios
+    split_ratios:
+      train: 0.7
+      val: 0.15
+      test: 0.15
+    
+    # Preprocessing pipeline
+    preprocessing_pipeline:
+      - handle_missing_values
+      - encode_categorical
+      - scale_numerical
+      - remove_low_variance
+    
+    # Feature engineering
+    feature_engineering:
+      - transaction_frequency
+      - amount_statistics
+      - time_features
+    
+    # Metadata
+    license: "Kaggle Competition License"
+    citation: "IEEE-CIS Fraud Detection, Kaggle 2019"
+    tags:
+      - fraud-detection
+      - financial
+      - imbalanced
+      - large-scale
+    
+    is_active: true
+  
+  # ============================================================
+  # GIVE ME SOME CREDIT
+  # ============================================================
+  - id: givemesomecredit
+    name: givemesomecredit
+    display_name: "Give Me Some Credit"
+    description: "Credit default prediction dataset. Predict probability of someone experiencing financial distress in the next two years. 150K samples, 10 features."
+    
+    # Source
+    source: kaggle
+    kaggle_dataset: brycecf/give-me-some-credit-dataset
+    
+    # Configuration
+    target_column: SeriousDlqin2yrs
+    positive_class: 1
+    
+    # Split ratios
+    split_ratios:
+      train: 0.7
+      val: 0.15
+      test: 0.15
+    
+    # Preprocessing pipeline
+    preprocessing_pipeline:
+      - handle_missing_values
+      - remove_outliers
+      - scale_numerical
+    
+    # Metadata
+    license: "CC0: Public Domain"
+    citation: "Give Me Some Credit, Kaggle 2011"
+    tags:
+      - credit-risk
+      - financial
+      - classification
+      - imbalanced
+    
+    is_active: true
+  
+  # ============================================================
+  # GERMAN CREDIT RISK
+  # ============================================================
+  - id: german-credit
+    name: german-credit
+    display_name: "German Credit Risk"
+    description: "German credit risk classification dataset from UCI. Classify people as good or bad credit risks. 1K samples, 20 features."
+    
+    # Source
+    source: kaggle
+    kaggle_dataset: uciml/german-credit
+    
+    # Configuration
+    target_column: Risk
+    positive_class: bad
+    
+    # Split ratios
+    split_ratios:
+      train: 0.7
+      val: 0.15
+      test: 0.15
+    
+    # Preprocessing pipeline
+    preprocessing_pipeline:
+      - encode_categorical
+      - scale_numerical
+    
+    # Metadata
+    license: "CC0: Public Domain"
+    citation: "UCI Machine Learning Repository - German Credit Data"
+    tags:
+      - credit-risk
+      - financial
+      - small-dataset
+      - classification
+    
+    is_active: false  # Disabled - dataset format incompatible
+  
+  # ============================================================
+  # TEMPLATE FOR NEW DATASETS
+  # ============================================================
+  # - id: my-dataset-id
+  #   name: my-dataset-id
+  #   display_name: "My Dataset Name"
+  #   description: "Dataset description"
+  #   
+  #   source: kaggle  # or 'upload' or 'url'
+  #   kaggle_dataset: username/dataset-name  # if kaggle
+  #   kaggle_competition: competition-name    # if kaggle competition
+  #   
+  #   target_column: target
+  #   positive_class: 1
+  #   
+  #   split_ratios:
+  #     train: 0.7
+  #     val: 0.15
+  #     test: 0.15
+  #   
+  #   preprocessing_pipeline:
+  #     - handle_missing_values
+  #     - encode_categorical
+  #     - scale_numerical
+  #   
+  #   license: "License info"
+  #   citation: "Citation info"
+  #   tags:
+  #     - tag1
+  #     - tag2
+  #   
+  #   is_active: true
