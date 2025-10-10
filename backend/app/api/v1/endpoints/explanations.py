@@ -211,3 +211,59 @@ async def get_quality_evaluation(eval_id: str):
         raise HTTPException(status_code=404, detail="Quality evaluation not found")
     
     return json.loads(data)
+
+
+@router.get("/{explanation_id}/quality")
+async def get_explanation_quality_metrics(explanation_id: str):
+    """
+    Get quality metrics for an explanation.
+    Returns cached results if available, otherwise returns mock data for demo.
+    """
+    # Get explanation
+    data = redis_client.get(f"explanation:{explanation_id}")
+    
+    if not data:
+        raise HTTPException(status_code=404, detail="Explanation not found")
+    
+    explanation = json.loads(data)
+    
+    if explanation["status"] != "completed":
+        raise HTTPException(status_code=400, detail="Explanation not yet completed")
+    
+    # Check if quality metrics already exist
+    quality_key = f"quality:{explanation_id}"
+    quality_data = redis_client.get(quality_key)
+    
+    if quality_data:
+        return json.loads(quality_data)
+    
+    # Return demo metrics based on method
+    method = explanation.get("method", "shap")
+    
+    if method == "shap":
+        metrics = {
+            "faithfulness": 0.85,
+            "robustness": 0.92,
+            "complexity": 0.73,
+            "method": "shap"
+        }
+    else:  # lime
+        metrics = {
+            "faithfulness": 0.78,
+            "robustness": 0.81,
+            "complexity": 0.68,
+            "method": "lime"
+        }
+    
+    result = {
+        "explanation_id": explanation_id,
+        "model_id": explanation["model_id"],
+        "method": method,
+        "quality_metrics": metrics,
+        "note": "Demo metrics - run full evaluation for accurate results"
+    }
+    
+    # Cache the result
+    redis_client.setex(quality_key, 3600, json.dumps(result))
+    
+    return result
