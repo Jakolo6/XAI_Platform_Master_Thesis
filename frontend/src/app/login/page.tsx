@@ -1,3 +1,12 @@
+/**
+ * LOGIN PAGE
+ * Route: /login
+ * 
+ * User authentication page.
+ * Handles login with email/password.
+ * Redirects to dashboard on success.
+ */
+
 'use client';
 
 import { useState } from 'react';

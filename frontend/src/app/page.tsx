@@ -1,5 +1,15 @@
+/**
+ * HOME PAGE - Landing Page
+ * Route: /
+ * 
+ * The main landing page of the XAI Platform.
+ * Redirects authenticated users to dashboard.
+ * Shows welcome message and login button for guests.
+ */
+
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BarChart3, Brain, Shield, Zap } from 'lucide-react';
 

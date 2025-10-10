@@ -1,3 +1,12 @@
+/**
+ * GLOBAL MODELS COMPARISON PAGE
+ * Route: /models/compare
+ * 
+ * Compare multiple models against each other.
+ * Shows model selection and comparison interface.
+ * Protected route - requires authentication.
+ */
+
 'use client';
 
 import { useEffect } from 'react';

@@ -1,3 +1,12 @@
+/**
+ * MODEL COMPARISON PAGE
+ * Route: /models/[id]/compare
+ * 
+ * Compares SHAP vs LIME explanations for a specific model.
+ * Shows agreement metrics, correlation, and side-by-side comparison.
+ * Protected route - requires authentication.
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

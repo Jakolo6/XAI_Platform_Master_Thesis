@@ -1,3 +1,12 @@
+/**
+ * DASHBOARD PAGE
+ * Route: /dashboard
+ * 
+ * Main dashboard after login.
+ * Shows overview of models, metrics, and quick actions.
+ * Protected route - requires authentication.
+ */
+
 'use client';
 
 import { useEffect } from 'react';

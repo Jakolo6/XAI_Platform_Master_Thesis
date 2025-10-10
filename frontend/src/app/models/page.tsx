@@ -1,3 +1,12 @@
+/**
+ * MODELS LIST PAGE
+ * Route: /models
+ * 
+ * Displays all trained ML models.
+ * Shows model cards with metrics and actions.
+ * Protected route - requires authentication.
+ */
+
 'use client';
 
 import { useEffect } from 'react';

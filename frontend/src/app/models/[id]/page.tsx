@@ -1,3 +1,13 @@
+/**
+ * MODEL DETAIL PAGE
+ * Route: /models/[id]
+ * 
+ * Detailed view of a single model.
+ * Shows metrics, confusion matrix, and explanation generation.
+ * Supports SHAP and LIME explanation methods.
+ * Protected route - requires authentication.
+ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
