@@ -5,12 +5,13 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth';
 import { useModelsStore } from '@/store/models';
-import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles } from 'lucide-react';
+import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown } from 'lucide-react';
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
 import ExplanationViewer from '@/components/explanations/ExplanationViewer';
 import { explanationsAPI } from '@/lib/api';
+import { exportSHAPToCSV, exportLIMEToCSV } from '@/utils/export';
 
 // Enable debug logging in development
 const DEBUG = process.env.NODE_ENV === 'development';
@@ -514,11 +515,28 @@ export default function ModelDetailPage() {
             {/* Explanation Section */}
             {(shapExplanation || limeExplanation) && (
               <div className="bg-white rounded-lg shadow-sm border">
-                <div className="px-6 py-4 border-b">
-                <h2 className="text-xl font-bold text-gray-900"> {selectedMethod === 'shap' ? 'SHAP' : 'LIME'} Explanation </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Understanding feature importance and model predictions
-                  </p>
+                <div className="px-6 py-4 border-b flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900"> {selectedMethod === 'shap' ? 'SHAP' : 'LIME'} Explanation </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Understanding feature importance and model predictions
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const explanation = selectedMethod === 'shap' ? shapExplanation : limeExplanation;
+                      const modelName = selectedModel?.name || 'model';
+                      if (selectedMethod === 'shap') {
+                        exportSHAPToCSV(explanation, modelName);
+                      } else {
+                        exportLIMEToCSV(explanation, modelName);
+                      }
+                    }}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </button>
                 </div>
                 <div className="p-6">
                   <ExplanationViewer 
