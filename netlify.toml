@@ -7,16 +7,12 @@
 [build.environment]
   NODE_VERSION = "18"
 
+# Next.js specific configuration
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [[redirects]]
   from = "/api/*"
   to = "https://your-backend-url.com/api/:splat"
   status = 200
   force = true
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-[functions]
-  node_bundler = "esbuild"
