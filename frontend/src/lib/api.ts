@@ -136,4 +136,13 @@ export const benchmarksAPI = {
     api.get('/benchmarks/leaderboard', { params: { metric, limit } }),
 };
 
+export const researchAPI = {
+  getLeaderboard: (dataset_id?: string) =>
+    api.get('/research/leaderboard', { params: { dataset_id } }),
+  
+  getComparison: () => api.get('/research/comparison'),
+  
+  getTradeOffs: () => api.get('/research/trade-offs'),
+};
+
 export default api;

@@ -11,9 +11,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { Brain, TrendingUp, Target, Sparkles, Filter, Download } from 'lucide-react';
+import { Brain, TrendingUp, Target, Sparkles, Filter, Download, Loader2 } from 'lucide-react';
 import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
 import TradeOffScatter from '@/components/charts/TradeOffScatter';
+import { researchAPI } from '@/lib/api';
 
 // Demo data for prototype
 const DEMO_DATA = {
@@ -89,12 +90,30 @@ export default function ResearchPage() {
   const [selectedDataset, setSelectedDataset] = useState<string>('all');
   const [selectedMethod, setSelectedMethod] = useState<string>('all');
   const [showParetoFrontier, setShowParetoFrontier] = useState(true);
+  const [leaderboardData, setLeaderboardData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
+      return;
     }
+    fetchLeaderboardData();
   }, [isAuthenticated, router]);
+
+  const fetchLeaderboardData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await researchAPI.getLeaderboard();
+      setLeaderboardData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch leaderboard:', error);
+      // Fallback to demo data
+      setLeaderboardData(DEMO_DATA);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!isAuthenticated) {
     return (
@@ -104,12 +123,27 @@ export default function ResearchPage() {
     );
   }
 
+  // Use real data or fallback to demo
+  const modelsData = leaderboardData?.models || DEMO_DATA.models;
+  
   // Filter data based on selections
-  const filteredData = DEMO_DATA.models.filter(model => {
-    if (selectedDataset !== 'all' && model.dataset !== selectedDataset) return false;
+  const filteredData = modelsData.filter((model: any) => {
+    if (selectedDataset !== 'all' && model.dataset_id !== selectedDataset) return false;
     if (selectedMethod !== 'all' && model.method !== selectedMethod) return false;
     return true;
   });
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading research data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
