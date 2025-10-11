@@ -24,12 +24,12 @@ class SupabaseClient:
     
     # ========== DATASETS ==========
     
-    def get_datasets(self, is_active: bool = True) -> List[Dict]:
+    def get_datasets(self, is_active: bool = None) -> List[Dict]:
         """Get all datasets."""
         try:
             query = self.client.table('datasets').select('*')
-            if is_active:
-                query = query.eq('is_active', True)
+            if is_active is not None:
+                query = query.eq('is_active', is_active)
             response = query.execute()
             logger.info("Fetched datasets", count=len(response.data))
             return response.data
