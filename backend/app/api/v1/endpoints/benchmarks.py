@@ -34,8 +34,18 @@ async def get_benchmarks(
         # Get all datasets
         datasets = supabase_db.list_datasets()
         
-        # Get all models with metrics
+        # Get all models
         models = supabase_db.list_models()
+        
+        # Enrich models with metrics from model_metrics table
+        enriched_models = []
+        for model in models:
+            metrics = supabase_db.get_model_metrics(model['id'])
+            if metrics:
+                enriched_model = {**model, **metrics}
+            else:
+                enriched_model = model
+            enriched_models.append(enriched_model)
         
         # Group by dataset
         benchmarks = []
@@ -45,7 +55,7 @@ async def get_benchmarks(
             dataset_name = dataset['name']
             
             # Get models for this dataset
-            dataset_models = [m for m in models if m.get('dataset_id') == dataset_id]
+            dataset_models = [m for m in enriched_models if m.get('dataset_id') == dataset_id]
             
             # Group by model type
             models_by_type = {}
@@ -53,7 +63,7 @@ async def get_benchmarks(
                 model_type = model['model_type']
                 
                 if model_type not in models_by_type:
-                    # Metrics are stored directly in the model object
+                    # Metrics are now enriched from model_metrics table
                     models_by_type[model_type] = {
                         'model_id': model['id'],
                         'auc_roc': model.get('auc_roc'),
