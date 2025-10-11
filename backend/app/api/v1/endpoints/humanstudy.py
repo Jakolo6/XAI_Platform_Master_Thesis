@@ -15,8 +15,16 @@ import uuid
 import random
 
 from app.core.database import get_db
-from app.core.auth import get_current_user, get_current_researcher
 from app.core.logger import logger
+
+# Placeholder auth functions (replace with actual auth when implemented)
+async def get_current_user():
+    """Placeholder for current user - returns None for now"""
+    return None
+
+async def get_current_researcher():
+    """Placeholder for researcher auth - returns None for now"""
+    return None
 
 router = APIRouter()
 

@@ -1,0 +1,23 @@
+# Minimal requirements for local dataset processing
+# No database drivers needed - only API clients
+
+# Data processing
+pandas==2.1.3
+numpy==1.26.2
+scikit-learn==1.3.2
+pyarrow==14.0.1
+
+# Kaggle API
+kaggle==1.5.16
+
+# AWS S3/R2 Storage
+boto3==1.29.7
+
+# Supabase client
+supabase==2.0.3
+
+# Logging
+structlog==23.2.0
+
+# Environment variables
+python-dotenv==1.0.0

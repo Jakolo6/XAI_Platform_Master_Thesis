@@ -132,13 +132,3 @@ VALUES
     ('givemesomecredit', 'givemesomecredit', 'Give Me Some Credit', 'Credit default prediction dataset', 'pending'),
     ('german-credit', 'german-credit', 'German Credit Risk', 'German credit risk classification dataset', 'pending')
 ON CONFLICT (id) DO NOTHING;
-
--- ============================================================
--- CLEANUP (if needed)
--- ============================================================
--- Uncomment to drop tables and start fresh
-
-DROP TABLE IF EXISTS benchmarks CASCADE;
-DROP TABLE IF EXISTS explanations CASCADE;
-DROP TABLE IF EXISTS models CASCADE;
-DROP TABLE IF EXISTS datasets CASCADE;
