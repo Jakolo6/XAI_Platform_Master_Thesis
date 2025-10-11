@@ -175,6 +175,30 @@ class ModelTrainingService:
                     }
                     supabase_db.create_model_metrics(metrics_data)
                 
+                # 13. Generate SHAP explanation automatically
+                logger.info("Generating SHAP explanation", model_id=model_id)
+                try:
+                    shap_explanation = self._generate_shap_explanation(
+                        model, X_test, y_test, model_type
+                    )
+                    
+                    # Save explanation to database
+                    explanation_id = f"{model_id}_shap"
+                    explanation_data = {
+                        'id': explanation_id,
+                        'model_id': model_id,
+                        'method': 'shap',
+                        'status': 'completed',
+                        'sample_size': min(100, len(X_test)),
+                        'feature_importance': shap_explanation['feature_importance'],
+                        'explanation_data': shap_explanation,
+                        'completed_at': pd.Timestamp.now().isoformat()
+                    }
+                    supabase_db.create_explanation(explanation_data)
+                    logger.info("SHAP explanation generated", explanation_id=explanation_id)
+                except Exception as e:
+                    logger.warning("Failed to generate SHAP explanation", error=str(e))
+                
                 logger.info("Model training complete",
                            model_id=model_id,
                            total_time=total_time,
@@ -253,6 +277,67 @@ class ModelTrainingService:
         
         training_time = time.time() - start_time
         return model, training_time
+    
+    def _generate_shap_explanation(
+        self,
+        model,
+        X_test: pd.DataFrame,
+        y_test: pd.Series,
+        model_type: str
+    ) -> Dict[str, Any]:
+        """
+        Generate SHAP explanation for the trained model.
+        
+        Args:
+            model: Trained model
+            X_test: Test features
+            y_test: Test labels
+            model_type: Type of model
+            
+        Returns:
+            Dictionary with SHAP values and feature importance
+        """
+        import shap
+        import numpy as np
+        
+        # Sample data for faster computation
+        sample_size = min(100, len(X_test))
+        X_sample = X_test.sample(n=sample_size, random_state=42)
+        
+        # Create explainer based on model type
+        if model_type in ['xgboost', 'random_forest']:
+            explainer = shap.TreeExplainer(model)
+        else:
+            # Use KernelExplainer for other models
+            background = shap.sample(X_test, min(50, len(X_test)))
+            explainer = shap.KernelExplainer(model.predict_proba, background)
+        
+        # Calculate SHAP values
+        shap_values = explainer.shap_values(X_sample)
+        
+        # For binary classification, take positive class
+        if isinstance(shap_values, list):
+            shap_values = shap_values[1]
+        
+        # Calculate feature importance (mean absolute SHAP values)
+        feature_importance = {}
+        for i, col in enumerate(X_sample.columns):
+            feature_importance[col] = float(np.abs(shap_values[:, i]).mean())
+        
+        # Sort by importance
+        feature_importance = dict(
+            sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+        )
+        
+        # Get top 20 features
+        top_features = dict(list(feature_importance.items())[:20])
+        
+        return {
+            'feature_importance': top_features,
+            'method': 'shap',
+            'sample_size': sample_size,
+            'feature_names': list(X_sample.columns)
+        }
     
     def _get_feature_importance(self, model, feature_names) -> Dict[str, float]:
         """Extract feature importance from model."""
