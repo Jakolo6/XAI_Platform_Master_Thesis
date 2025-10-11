@@ -42,7 +42,15 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_KEY: str = ""  # Renamed from SUPABASE_SERVICE_ROLE_KEY to match .env
     
-    # Storage Buckets
+    # Cloudflare R2 Storage (S3-compatible)
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "xai-platform-datasets"
+    R2_ENDPOINT_URL: str = "https://ff9c5d15c3296ba6a3aa9a96d1163cfe.r2.cloudflarestorage.com"
+    R2_PUBLIC_URL: str = ""  # Optional: for public access
+    
+    # Storage Buckets (legacy - now using R2 paths)
     STORAGE_BUCKET_DATASETS: str = "datasets"
     STORAGE_BUCKET_MODELS: str = "models"
     STORAGE_BUCKET_EXPLANATIONS: str = "explanations"
