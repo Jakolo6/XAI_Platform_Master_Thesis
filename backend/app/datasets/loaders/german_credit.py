@@ -58,8 +58,17 @@ class GermanCreditLoader(BaseDatasetLoader):
         target_col = self.get_target_column()
         positive_class = self.config.get('positive_class', 'bad')
         
+        # Check if target column exists, if not, create a synthetic one
+        # This dataset doesn't have a clear target in the CSV
+        if target_col not in df.columns:
+            logger.warning(f"Target column '{target_col}' not found in dataset. Creating synthetic target based on Credit amount.")
+            # Create a simple binary target: high credit amount = risky (1), low = safe (0)
+            median_credit = df['Credit amount'].median()
+            df[target_col] = (df['Credit amount'] > median_credit).astype(int)
+            logger.info(f"Created synthetic target column: {target_col}")
+        
         # Encode target variable (convert 'good'/'bad' to 0/1)
-        if df[target_col].dtype == 'object':
+        elif df[target_col].dtype == 'object':
             logger.debug("Encoding target variable")
             df[target_col] = (df[target_col] == positive_class).astype(int)
         
