@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     logger.info("Starting application", app_name=settings.APP_NAME, version=settings.APP_VERSION)
+    logger.info("CORS origins configured", origins=settings.BACKEND_CORS_ORIGINS)
     
     # Try to initialize database, but don't fail if PostgreSQL is not available
     # (We're using Supabase for metadata storage)

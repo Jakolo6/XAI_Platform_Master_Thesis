@@ -19,11 +19,7 @@ class Settings(BaseSettings):
     
     # API
     API_V1_PREFIX: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://localhost:8000",
-        "https://xai-working-project.netlify.app"
-    ]
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000,https://xai-working-project.netlify.app"
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://xai_user:xai_password@localhost:5432/xai_finance_db"
@@ -84,7 +80,10 @@ class Settings(BaseSettings):
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def parse_cors_origins(cls, v):
         if isinstance(v, str):
-            return json.loads(v)
+            # Try JSON first, then comma-separated
+            if v.startswith('['):
+                return json.loads(v)
+            return [origin.strip() for origin in v.split(',')]
         return v
     
     class Config:
