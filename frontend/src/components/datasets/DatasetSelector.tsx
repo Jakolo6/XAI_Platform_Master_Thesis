@@ -7,13 +7,15 @@ import { datasetsAPI } from '@/lib/api';
 interface Dataset {
   id: string;
   name: string;
-  display_name: string;
+  display_name?: string;
   description: string;
-  total_samples: number;
-  num_features: number;
+  total_samples: number;  // Maps to total_rows in backend
+  num_features: number;   // Maps to total_columns in backend
   status: string;
   tags: string[];
-  class_balance: Record<string, number>;
+  fraud_count?: number;
+  non_fraud_count?: number;
+  fraud_percentage?: number;
 }
 
 interface DatasetSelectorProps {
@@ -127,20 +129,18 @@ export function DatasetSelector({ onSelect, selectedId }: DatasetSelectorProps) 
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Samples:</span>
               <span className="font-medium text-gray-900">
-                {dataset.total_samples?.toLocaleString()}
+                {dataset.total_samples?.toLocaleString() || 0}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Features:</span>
-              <span className="font-medium text-gray-900">{dataset.num_features}</span>
+              <span className="font-medium text-gray-900">{dataset.num_features || 0}</span>
             </div>
-            {dataset.class_balance && Object.keys(dataset.class_balance).length > 0 && (
+            {dataset.fraud_percentage !== null && dataset.fraud_percentage !== undefined && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Balance:</span>
-                <span className="font-medium text-gray-900 text-xs">
-                  {Object.entries(dataset.class_balance)
-                    .map(([k, v]) => `${k}: ${(v * 100).toFixed(1)}%`)
-                    .join(', ')}
+                <span className="text-gray-500">Fraud Rate:</span>
+                <span className="font-medium text-gray-900">
+                  {dataset.fraud_percentage.toFixed(1)}%
                 </span>
               </div>
             )}
