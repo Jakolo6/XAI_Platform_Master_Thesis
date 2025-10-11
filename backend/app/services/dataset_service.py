@@ -60,7 +60,7 @@ class DatasetProcessingService:
                 
                 # 5. Load and preprocess
                 logger.info("Loading and preprocessing dataset", dataset_id=dataset_id)
-                loader = get_loader(dataset_id, config)
+                loader = get_loader(dataset_id, config, data_dir=temp_dir)
                 raw_df = loader.load_raw_data()
                 processed_df = loader.preprocess(raw_df)
                 

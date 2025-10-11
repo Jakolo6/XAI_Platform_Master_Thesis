@@ -14,12 +14,13 @@ __all__ = [
 ]
 
 
-def get_loader(dataset_id: str, config: dict) -> BaseDatasetLoader:
+def get_loader(dataset_id: str, config: dict, data_dir=None) -> BaseDatasetLoader:
     """Get appropriate loader for dataset.
     
     Args:
         dataset_id: Dataset identifier
         config: Dataset configuration
+        data_dir: Optional data directory path
         
     Returns:
         Dataset loader instance
@@ -34,4 +35,4 @@ def get_loader(dataset_id: str, config: dict) -> BaseDatasetLoader:
     if loader_class is None:
         raise ValueError(f"No loader found for dataset: {dataset_id}")
     
-    return loader_class(dataset_id, config)
+    return loader_class(dataset_id, config, data_dir=data_dir)

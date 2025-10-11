@@ -16,19 +16,23 @@ class BaseDatasetLoader(ABC):
     the abstract methods for downloading and preprocessing.
     """
     
-    def __init__(self, dataset_id: str, config: Dict):
+    def __init__(self, dataset_id: str, config: Dict, data_dir: Optional[Path] = None):
         """Initialize dataset loader.
         
         Args:
             dataset_id: Dataset identifier
             config: Dataset configuration from registry
+            data_dir: Optional data directory path (defaults to data/{dataset_id})
         """
         self.dataset_id = dataset_id
         self.config = config
         
-        # Create data directory
-        self.data_dir = Path("data") / dataset_id
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+        # Use provided data directory or default
+        if data_dir:
+            self.data_dir = Path(data_dir)
+        else:
+            self.data_dir = Path("data") / dataset_id
+            self.data_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info("Dataset loader initialized", 
                    dataset_id=dataset_id,
