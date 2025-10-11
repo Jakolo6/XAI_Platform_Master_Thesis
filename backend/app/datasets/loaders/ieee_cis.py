@@ -39,7 +39,7 @@ class IEEECISLoader(BaseDatasetLoader):
         return self.data_dir
     
     def preprocess(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Preprocess IEEE-CIS dataset.
+        """Preprocess IEEE-CIS dataset with memory optimization.
         
         Args:
             df: Raw dataframe
@@ -50,6 +50,13 @@ class IEEECISLoader(BaseDatasetLoader):
         logger.info("Preprocessing IEEE-CIS dataset", 
                    rows=len(df), 
                    cols=len(df.columns))
+        
+        # Drop columns with >50% missing values to save memory
+        logger.debug("Dropping high-missing columns")
+        missing_pct = df.isnull().sum() / len(df)
+        cols_to_keep = missing_pct[missing_pct < 0.5].index.tolist()
+        df = df[cols_to_keep]
+        logger.info(f"Kept {len(cols_to_keep)} columns with <50% missing values")
         
         # Handle missing values
         logger.debug("Handling missing values")
@@ -72,35 +79,28 @@ class IEEECISLoader(BaseDatasetLoader):
             if col != target_col:
                 df[col] = df[col].astype('category').cat.codes
         
-        # Remove low variance features
-        logger.debug("Removing low variance features")
-        from sklearn.feature_selection import VarianceThreshold
-        
+        # Limit features to top 50 by variance to save memory
+        logger.debug("Selecting top features by variance")
         feature_cols = self.get_feature_columns(df)
-        selector = VarianceThreshold(threshold=0.01)
         
-        # Fit on features only
-        X = df[feature_cols]
-        selector.fit(X)
+        if len(feature_cols) > 50:
+            # Calculate variance for each feature
+            variances = df[feature_cols].var()
+            top_features = variances.nlargest(50).index.tolist()
+            df = df[top_features + [target_col]]
+            logger.info(f"Selected top 50 features from {len(feature_cols)}")
+        else:
+            df = df[feature_cols + [target_col]]
         
-        # Get selected feature names
-        selected_features = [feature_cols[i] for i in range(len(feature_cols)) 
-                           if selector.get_support()[i]]
-        
-        # Keep selected features + target
-        df = df[selected_features + [target_col]]
-        
-        logger.info("Preprocessing complete",
-                   original_features=len(feature_cols),
-                   selected_features=len(selected_features))
+        logger.info("Preprocessing complete", features=len(df.columns) - 1)
         
         return df
     
     def load_raw_data(self) -> pd.DataFrame:
-        """Load raw IEEE-CIS data from CSV files.
+        """Load raw IEEE-CIS data from CSV files with memory optimization.
         
         Returns:
-            Combined dataframe
+            Combined dataframe (sampled for memory efficiency)
         """
         transaction_file = self.data_dir / 'train_transaction.csv'
         identity_file = self.data_dir / 'train_identity.csv'
@@ -108,17 +108,36 @@ class IEEECISLoader(BaseDatasetLoader):
         if not transaction_file.exists():
             raise FileNotFoundError(f"Transaction file not found: {transaction_file}")
         
-        logger.info("Loading transaction data")
-        transaction_df = pd.read_csv(transaction_file)
+        logger.info("Loading transaction data with sampling for memory efficiency")
+        
+        # Sample 100k rows instead of all 590k to fit in memory
+        # This is sufficient for XAI research and model training
+        sample_size = 100000
+        
+        # Read with sampling to reduce memory usage
+        transaction_df = pd.read_csv(
+            transaction_file,
+            nrows=sample_size,
+            low_memory=True
+        )
+        
+        logger.info(f"Loaded {len(transaction_df)} transaction rows (sampled for memory efficiency)")
         
         # Identity file is optional
         if identity_file.exists():
             logger.info("Loading identity data")
-            identity_df = pd.read_csv(identity_file)
+            identity_df = pd.read_csv(
+                identity_file,
+                nrows=sample_size,
+                low_memory=True
+            )
             
             # Merge on TransactionID
             logger.info("Merging transaction and identity data")
             df = transaction_df.merge(identity_df, on='TransactionID', how='left')
+            
+            # Clean up to free memory
+            del transaction_df, identity_df
         else:
             logger.warning("Identity file not found, using transaction data only")
             df = transaction_df
