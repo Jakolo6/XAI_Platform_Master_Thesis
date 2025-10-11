@@ -174,6 +174,127 @@ class KaggleClient:
                 'error': str(e)
             }
     
+    def download_competition(
+        self,
+        competition_name: str,
+        output_dir: str
+    ) -> Dict[str, Any]:
+        """
+        Download a Kaggle competition dataset.
+        
+        Args:
+            competition_name: Name of the competition
+            output_dir: Directory to save downloaded files
+            
+        Returns:
+            Dictionary with download status and file paths
+        """
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            
+            logger.info("Downloading Kaggle competition",
+                       competition=competition_name,
+                       output_dir=output_dir)
+            
+            # Initialize API
+            api = KaggleApi()
+            api.authenticate()
+            
+            # Create output directory
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Download competition files
+            api.competition_download_files(
+                competition_name,
+                path=output_dir,
+                quiet=False
+            )
+            
+            # Extract zip files
+            zip_file = Path(output_dir) / f'{competition_name}.zip'
+            if zip_file.exists():
+                logger.info("Extracting downloaded files")
+                with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                    zip_ref.extractall(output_dir)
+                zip_file.unlink()
+            
+            # Find all CSV files
+            csv_files = list(Path(output_dir).glob('*.csv'))
+            
+            logger.info("Competition download complete",
+                       file_count=len(csv_files))
+            
+            return {
+                'status': 'success',
+                'files': [str(f) for f in csv_files],
+                'output_dir': output_dir,
+            }
+            
+        except Exception as e:
+            logger.error("Failed to download competition", exc_info=e)
+            return {
+                'status': 'error',
+                'error': str(e),
+                'message': f'Failed to download competition: {competition_name}'
+            }
+    
+    def download_dataset(
+        self,
+        dataset_name: str,
+        output_dir: str
+    ) -> Dict[str, Any]:
+        """
+        Download a Kaggle dataset.
+        
+        Args:
+            dataset_name: Name of the dataset (format: owner/dataset-name)
+            output_dir: Directory to save downloaded files
+            
+        Returns:
+            Dictionary with download status and file paths
+        """
+        try:
+            from kaggle.api.kaggle_api_extended import KaggleApi
+            
+            logger.info("Downloading Kaggle dataset",
+                       dataset=dataset_name,
+                       output_dir=output_dir)
+            
+            # Initialize API
+            api = KaggleApi()
+            api.authenticate()
+            
+            # Create output directory
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Download dataset files
+            api.dataset_download_files(
+                dataset_name,
+                path=output_dir,
+                unzip=True,
+                quiet=False
+            )
+            
+            # Find all CSV files
+            csv_files = list(Path(output_dir).glob('*.csv'))
+            
+            logger.info("Dataset download complete",
+                       file_count=len(csv_files))
+            
+            return {
+                'status': 'success',
+                'files': [str(f) for f in csv_files],
+                'output_dir': output_dir,
+            }
+            
+        except Exception as e:
+            logger.error("Failed to download dataset", exc_info=e)
+            return {
+                'status': 'error',
+                'error': str(e),
+                'message': f'Failed to download dataset: {dataset_name}'
+            }
+    
     def verify_credentials(self) -> bool:
         """
         Verify Kaggle API credentials are valid.
