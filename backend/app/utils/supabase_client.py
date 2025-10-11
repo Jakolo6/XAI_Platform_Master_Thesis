@@ -202,6 +202,18 @@ class SupabaseClient:
             logger.error("Failed to create explanation", error=str(e))
             return None
     
+    def get_explanation(self, explanation_id: str) -> Optional[Dict]:
+        """Get explanation by ID."""
+        if not self.is_available():
+            return None
+        
+        try:
+            result = self.client.table('explanations').select('*').eq('id', explanation_id).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error("Failed to get explanation", explanation_id=explanation_id, error=str(e))
+            return None
+    
     def list_explanations(self, model_id: Optional[str] = None) -> List[Dict]:
         """List explanations, optionally filtered by model."""
         if not self.is_available():
