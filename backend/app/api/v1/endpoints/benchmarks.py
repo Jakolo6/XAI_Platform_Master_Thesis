@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import structlog
 
 from app.api.dependencies import get_current_researcher
-from app.supabase.client import get_supabase_client
+from app.utils.supabase_client import supabase_db
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -31,13 +31,11 @@ async def get_benchmarks(
     Returns performance comparison across all datasets and models.
     """
     try:
-        supabase = get_supabase_client()
-        
         # Get all datasets
-        datasets = supabase.get_datasets()
+        datasets = supabase_db.list_datasets()
         
         # Get all models with metrics
-        models = supabase.get_models()
+        models = supabase_db.list_models()
         
         # Group by dataset
         benchmarks = []
@@ -105,14 +103,12 @@ async def compare_models(
         Comparison matrix with best performers
     """
     try:
-        supabase = get_supabase_client()
-        
         # Parse filters
         dataset_filter = dataset_ids.split(',') if dataset_ids else None
         model_filter = model_types.split(',') if model_types else None
         
         # Get all models
-        models = supabase.get_models()
+        models = supabase_db.list_models()
         
         # Build comparison matrix
         comparison = {}
@@ -130,7 +126,7 @@ async def compare_models(
             
             # Get metrics
             try:
-                metrics = supabase.get_model_metrics(model['id'])
+                metrics = supabase_db.get_model_metrics(model['id'])
                 if not metrics:
                     continue
                 
@@ -222,10 +218,8 @@ async def get_leaderboard(
         Ranked list of best performing models
     """
     try:
-        supabase = get_supabase_client()
-        
         # Get all models
-        models = supabase.get_models()
+        models = supabase_db.list_models()
         
         # Collect models with metrics
         leaderboard = []
@@ -235,7 +229,7 @@ async def get_leaderboard(
                 continue
             
             try:
-                metrics = supabase.get_model_metrics(model['id'])
+                metrics = supabase_db.get_model_metrics(model['id'])
                 if not metrics:
                     continue
                 

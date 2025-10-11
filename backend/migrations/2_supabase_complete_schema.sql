@@ -179,7 +179,6 @@ CREATE INDEX idx_users_role ON users(role);
 
 -- Datasets
 CREATE INDEX idx_datasets_status ON datasets(status);
-CREATE INDEX idx_datasets_task_type ON datasets(task_type);
 
 -- Models
 CREATE INDEX idx_models_dataset ON models(dataset_id);
@@ -263,10 +262,11 @@ CREATE VIEW dataset_statistics AS
 SELECT 
     d.id,
     d.name,
-    d.num_samples,
-    d.num_features,
-    d.num_classes,
-    d.class_balance,
+    d.total_rows,
+    d.total_columns,
+    d.fraud_count,
+    d.non_fraud_count,
+    d.fraud_percentage,
     COUNT(DISTINCT m.id) as num_models,
     COUNT(DISTINCT e.id) as num_explanations,
     MAX(mm.auc_roc) as best_auc_roc,
@@ -275,7 +275,7 @@ FROM datasets d
 LEFT JOIN models m ON d.id = m.dataset_id AND m.status = 'completed'
 LEFT JOIN model_metrics mm ON m.id = mm.model_id
 LEFT JOIN explanations e ON d.id = e.dataset_id
-GROUP BY d.id, d.name, d.num_samples, d.num_features, d.num_classes, d.class_balance;
+GROUP BY d.id, d.name, d.total_rows, d.total_columns, d.fraud_count, d.non_fraud_count, d.fraud_percentage;
 
 -- ============================================================================
 -- TRIGGERS

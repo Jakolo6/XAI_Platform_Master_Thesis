@@ -1,302 +1,230 @@
 """
-Dataset management endpoints.
+Dataset management endpoints - simplified without Celery.
 """
 
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 import structlog
 
-from app.core.database import get_db
 from app.api.dependencies import get_current_researcher
-from app.models.dataset import Dataset, DatasetStatus
-from app.tasks.dataset_tasks import (
-    download_ieee_cis_dataset,
-    preprocess_dataset,
-    calculate_dataset_statistics
-)
+from app.services.dataset_service import dataset_service
+from app.utils.supabase_client import supabase_db
+from app.datasets.registry import get_dataset_registry
 
 logger = structlog.get_logger()
 router = APIRouter()
 
 
-class DatasetCreate(BaseModel):
-    """Dataset creation schema."""
-    name: str
-    description: str = ""
-    source: str = "upload"
-
-
-class DatasetResponse(BaseModel):
-    """Dataset response schema."""
-    id: str
-    name: str
-    description: str
-    source: str
-    status: str
-    total_rows: int = None
-    total_columns: int = None
-    created_at: str
-    processed_at: str = None
+class DatasetProcessRequest(BaseModel):
+    """Dataset processing request schema."""
+    apply_sampling: bool = True
 
 
 @router.get("/")
 async def list_datasets(
     skip: int = 0,
-    limit: int = 100,
-    current_user: str = Depends(get_current_researcher)
+    limit: int = 100
 ):
     """
-    List all datasets from registry.
-    Uses config/datasets.yaml as the source of truth.
+    List all datasets from registry and Supabase.
+    Combines registry configuration with processing status.
+    Public endpoint - no authentication required.
     """
     try:
-        # Primary source: registry (config/datasets.yaml)
-        from app.datasets.registry import get_dataset_registry
+        # Get datasets from registry
         registry = get_dataset_registry()
         datasets = []
+        
         for dataset_id, config in registry.datasets.items():
-            datasets.append({
+            # Get processing status from Supabase (with error handling)
+            db_dataset = None
+            try:
+                if supabase_db.is_available():
+                    db_dataset = supabase_db.get_dataset(dataset_id)
+            except Exception as e:
+                logger.warning("Could not fetch dataset from Supabase", 
+                             dataset_id=dataset_id, 
+                             error=str(e))
+            
+            # Combine registry config with database status
+            dataset_info = {
                 "id": dataset_id,
                 "name": dataset_id,
                 "display_name": config.get("display_name", dataset_id),
                 "description": config.get("description", ""),
-                "total_samples": config.get("total_samples", 0),
-                "num_features": config.get("num_features", 0),
-                "status": "completed",
                 "tags": config.get("tags", []),
-                "class_balance": config.get("class_balance", {})
-            })
+                "source": config.get("source", "kaggle"),
+                
+                # From database (if exists)
+                "status": db_dataset.get("status", "pending") if db_dataset else "pending",
+                "total_samples": db_dataset.get("total_rows", 0) if db_dataset else 0,
+                "num_features": db_dataset.get("total_columns", 0) if db_dataset else 0,
+                "train_samples": db_dataset.get("train_rows", 0) if db_dataset else 0,
+                "val_samples": db_dataset.get("val_rows", 0) if db_dataset else 0,
+                "test_samples": db_dataset.get("test_rows", 0) if db_dataset else 0,
+                "fraud_count": db_dataset.get("fraud_count", 0) if db_dataset else 0,
+                "non_fraud_count": db_dataset.get("non_fraud_count", 0) if db_dataset else 0,
+                "fraud_percentage": db_dataset.get("fraud_percentage") if db_dataset else None,
+                "completed_at": db_dataset.get("completed_at") if db_dataset else None,
+                "file_path": db_dataset.get("file_path") if db_dataset else None
+            }
+            
+            datasets.append(dataset_info)
+        
         return datasets
+    
     except Exception as e:
-        logger.error("Failed to fetch datasets from registry", error=str(e))
+        logger.error("Failed to list datasets", exc_info=e)
         return []
 
 
-@router.post("/", response_model=DatasetResponse)
-async def create_dataset(
-    dataset_data: DatasetCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: str = Depends(get_current_researcher)
-):
-    """
-    Create a new dataset entry.
-    """
-    import uuid
-    new_dataset = Dataset(
-        id=str(uuid.uuid4()),
-        name=dataset_data.name,
-        description=dataset_data.description,
-        source=dataset_data.source,
-        status=DatasetStatus.PENDING
-    )
-    
-    db.add(new_dataset)
-    await db.commit()
-    await db.refresh(new_dataset)
-    
-    logger.info("Dataset created", dataset_id=str(new_dataset.id), name=dataset_data.name)
-    
-    return DatasetResponse(
-        id=str(new_dataset.id),
-        name=new_dataset.name,
-        description=new_dataset.description,
-        source=new_dataset.source,
-        status=new_dataset.status,
-        created_at=new_dataset.created_at.isoformat()
-    )
-
-
-@router.get("/{dataset_id}", response_model=Dict[str, Any])
+@router.get("/{dataset_id}")
 async def get_dataset(
-    dataset_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: str = Depends(get_current_researcher)
+    dataset_id: str
 ):
-    """
-    Get dataset details.
-    """
-    result = await db.execute(
-        select(Dataset).where(Dataset.id == dataset_id)
-    )
-    dataset = result.scalar_one_or_none()
+    """Get detailed information about a specific dataset. Public endpoint."""
+    try:
+        # Get from registry
+        registry = get_dataset_registry()
+        config = registry.get_dataset_config(dataset_id)
+        
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset {dataset_id} not found"
+            )
+        
+        # Get processing status from Supabase (with error handling)
+        db_dataset = None
+        try:
+            if supabase_db.is_available():
+                db_dataset = supabase_db.get_dataset(dataset_id)
+        except Exception as e:
+            logger.warning("Could not fetch dataset from Supabase", 
+                         dataset_id=dataset_id, 
+                         error=str(e))
+        
+        return {
+            "id": dataset_id,
+            "name": dataset_id,
+            "display_name": config.get("display_name", dataset_id),
+            "description": config.get("description", ""),
+            "tags": config.get("tags", []),
+            "source": config.get("source", "kaggle"),
+            "target_column": config.get("target_column"),
+            "preprocessing_pipeline": config.get("preprocessing_pipeline", []),
+            
+            # From database
+            "status": db_dataset.get("status", "pending") if db_dataset else "pending",
+            "total_samples": db_dataset.get("total_rows", 0) if db_dataset else 0,
+            "num_features": db_dataset.get("total_columns", 0) if db_dataset else 0,
+            "train_samples": db_dataset.get("train_rows", 0) if db_dataset else 0,
+            "val_samples": db_dataset.get("val_rows", 0) if db_dataset else 0,
+            "test_samples": db_dataset.get("test_rows", 0) if db_dataset else 0,
+            "fraud_count": db_dataset.get("fraud_count", 0) if db_dataset else 0,
+            "non_fraud_count": db_dataset.get("non_fraud_count", 0) if db_dataset else 0,
+            "fraud_percentage": db_dataset.get("fraud_percentage") if db_dataset else None,
+            "completed_at": db_dataset.get("completed_at") if db_dataset else None,
+            "file_path": db_dataset.get("file_path") if db_dataset else None,
+            "error_message": db_dataset.get("error_message") if db_dataset else None
+        }
     
-    if not dataset:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get dataset", dataset_id=dataset_id, exc_info=e)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dataset not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-    
-    return {
-        "id": dataset.id,
-        "name": dataset.name,
-        "description": dataset.description,
-        "source": dataset.source,
-        "source_identifier": dataset.source_identifier,
-        "status": dataset.status.value,
-        "file_path": dataset.file_path,
-        "file_size_mb": dataset.file_size_mb,
-        "total_rows": dataset.total_rows,
-        "total_columns": dataset.total_columns,
-        "train_rows": dataset.train_rows,
-        "val_rows": dataset.val_rows,
-        "test_rows": dataset.test_rows,
-        "fraud_count": dataset.fraud_count,
-        "non_fraud_count": dataset.non_fraud_count,
-        "fraud_percentage": dataset.fraud_percentage,
-        "preprocessing_config": dataset.preprocessing_config,
-        "feature_names": dataset.feature_names,
-        "statistics": dataset.statistics,
-        "error_message": dataset.error_message,
-        "created_at": dataset.created_at.isoformat(),
-        "updated_at": dataset.updated_at.isoformat() if dataset.updated_at else None,
-        "completed_at": dataset.completed_at.isoformat() if dataset.completed_at else None
-    }
 
 
 @router.post("/{dataset_id}/preprocess")
-async def trigger_preprocessing(
+async def process_dataset(
     dataset_id: str,
-    apply_sampling: bool = True,
-    db: AsyncSession = Depends(get_db),
+    background_tasks: BackgroundTasks,
+    request: DatasetProcessRequest = DatasetProcessRequest(),
     current_user: str = Depends(get_current_researcher)
 ):
     """
     Trigger dataset preprocessing.
+    Processing happens in background to avoid timeout.
     """
-    result = await db.execute(
-        select(Dataset).where(Dataset.id == dataset_id)
-    )
-    dataset = result.scalar_one_or_none()
-    
-    if not dataset:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dataset not found"
+    try:
+        # Check if dataset exists in registry
+        registry = get_dataset_registry()
+        config = registry.get_dataset_config(dataset_id)
+        
+        if not config:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset {dataset_id} not found in registry"
+            )
+        
+        # Check if already processed
+        status_check = dataset_service.check_dataset_status(dataset_id)
+        if status_check['processed']:
+            return {
+                "message": "Dataset already processed",
+                "dataset_id": dataset_id,
+                "status": "completed",
+                "file_path": status_check.get('file_path')
+            }
+        
+        # Ensure dataset exists in Supabase
+        db_dataset = supabase_db.get_dataset(dataset_id)
+        if not db_dataset:
+            # Create initial record
+            supabase_db.create_dataset({
+                'id': dataset_id,
+                'name': dataset_id,
+                'display_name': config.get('display_name', dataset_id),
+                'description': config.get('description', ''),
+                'status': 'pending'
+            })
+        
+        # Add processing to background tasks
+        background_tasks.add_task(
+            dataset_service.process_dataset,
+            dataset_id
         )
+        
+        logger.info("Dataset processing queued", dataset_id=dataset_id)
+        
+        return {
+            "message": "Dataset processing started",
+            "dataset_id": dataset_id,
+            "status": "processing",
+            "note": "Processing may take 2-5 minutes. Check status with GET /datasets/{dataset_id}"
+        }
     
-    # Update status to processing
-    dataset.status = DatasetStatus.PROCESSING
-    await db.commit()
-    
-    # Queue preprocessing task
-    task = preprocess_dataset.delay(
-        dataset_id=str(dataset.id),
-        transaction_path=f"data/raw/train_transaction.csv",
-        identity_path=f"data/raw/train_identity.csv",
-        output_dir=f"data/processed/{dataset.id}",
-        apply_sampling=apply_sampling
-    )
-    
-    logger.info("Preprocessing task queued",
-               dataset_id=dataset_id,
-               task_id=task.id)
-    
-    return {
-        "message": "Preprocessing started",
-        "dataset_id": dataset_id,
-        "task_id": task.id,
-        "status": "processing"
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to start dataset processing",
+                    dataset_id=dataset_id,
+                    exc_info=e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
-@router.post("/download-ieee-cis")
-async def download_ieee_cis(
-    db: AsyncSession = Depends(get_db),
-    current_user: str = Depends(get_current_researcher)
-):
-    """
-    Download IEEE-CIS fraud detection dataset from Kaggle.
-    """
-    # Create dataset entry
-    import uuid
-    new_dataset = Dataset(
-        id=str(uuid.uuid4()),
-        name="IEEE-CIS Fraud Detection",
-        description="IEEE-CIS Fraud Detection dataset from Kaggle",
-        source="kaggle",
-        status=DatasetStatus.DOWNLOADING
-    )
-    
-    db.add(new_dataset)
-    await db.commit()
-    await db.refresh(new_dataset)
-    
-    # Queue download task
-    task = download_ieee_cis_dataset.delay(
-        dataset_id=str(new_dataset.id),
-        output_dir="data/raw"
-    )
-    
-    logger.info("IEEE-CIS download task queued",
-               dataset_id=str(new_dataset.id),
-               task_id=task.id)
-    
-    return {
-        "message": "Download started",
-        "dataset_id": str(new_dataset.id),
-        "task_id": task.id,
-        "status": "downloading"
-    }
-
-
-@router.get("/{dataset_id}/statistics")
-async def get_dataset_statistics(
+@router.get("/{dataset_id}/status")
+async def get_dataset_status(
     dataset_id: str,
-    db: AsyncSession = Depends(get_db),
     current_user: str = Depends(get_current_researcher)
 ):
-    """
-    Get dataset statistics.
-    """
-    result = await db.execute(
-        select(Dataset).where(Dataset.id == dataset_id)
-    )
-    dataset = result.scalar_one_or_none()
-    
-    if not dataset:
+    """Check dataset processing status."""
+    try:
+        status_info = dataset_service.check_dataset_status(dataset_id)
+        return status_info
+    except Exception as e:
+        logger.error("Failed to check dataset status",
+                    dataset_id=dataset_id,
+                    exc_info=e)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dataset not found"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-    
-    return {
-        "dataset_id": dataset_id,
-        "statistics": dataset.statistics,
-        "total_rows": dataset.total_rows,
-        "total_columns": dataset.total_columns,
-        "fraud_percentage": dataset.fraud_percentage
-    }
-
-
-@router.delete("/{dataset_id}")
-async def delete_dataset(
-    dataset_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: str = Depends(get_current_researcher)
-):
-    """
-    Delete a dataset.
-    """
-    result = await db.execute(
-        select(Dataset).where(Dataset.id == dataset_id)
-    )
-    dataset = result.scalar_one_or_none()
-    
-    if not dataset:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dataset not found"
-        )
-    
-    await db.delete(dataset)
-    await db.commit()
-    
-    logger.info("Dataset deleted", dataset_id=dataset_id)
-    
-    return {
-        "message": "Dataset deleted successfully",
-        "dataset_id": dataset_id
-    }

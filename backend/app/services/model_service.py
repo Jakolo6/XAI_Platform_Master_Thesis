@@ -61,9 +61,9 @@ class ModelTrainingService:
             if not dataset or dataset['status'] != 'completed':
                 raise ValueError(f"Dataset {dataset_id} is not processed")
             
-            r2_path = dataset.get('r2_path')
-            if not r2_path:
-                raise ValueError(f"Dataset {dataset_id} has no R2 path")
+            file_path = dataset.get('file_path')
+            if not file_path:
+                raise ValueError(f"Dataset {dataset_id} has no file path")
             
             # 2. Create temp directory
             temp_dir = Path(f"/tmp/{model_id}")
@@ -76,9 +76,9 @@ class ModelTrainingService:
                 val_path = temp_dir / "val.parquet"
                 test_path = temp_dir / "test.parquet"
                 
-                r2_storage_client.download_file(f"{r2_path}/train.parquet", str(train_path))
-                r2_storage_client.download_file(f"{r2_path}/val.parquet", str(val_path))
-                r2_storage_client.download_file(f"{r2_path}/test.parquet", str(test_path))
+                r2_storage_client.download_file(f"{file_path}/train.parquet", str(train_path))
+                r2_storage_client.download_file(f"{file_path}/val.parquet", str(val_path))
+                r2_storage_client.download_file(f"{file_path}/test.parquet", str(test_path))
                 
                 # 4. Load data
                 logger.info("Loading training data", dataset_id=dataset_id)
@@ -145,25 +145,35 @@ class ModelTrainingService:
                 
                 total_time = time.time() - start_time
                 
-                # 11. Save metadata to Supabase
+                # 11. Save model metadata to Supabase
                 model_data = {
                     'id': model_id,
-                    'dataset_id': dataset_id,
+                    'name': f"{model_type}_{dataset_id}",
                     'model_type': model_type,
-                    'model_name': f"{model_type}_{dataset_id}",
-                    'r2_path': r2_model_path,
-                    'accuracy': metrics['accuracy'],
-                    'precision': metrics['precision'],
-                    'recall': metrics['recall'],
-                    'f1_score': metrics['f1_score'],
-                    'auc_roc': metrics['auc_roc'],
+                    'version': '1.0',
+                    'dataset_id': dataset_id,
+                    'status': 'completed',
+                    'model_path': r2_model_path,
                     'training_time_seconds': training_time,
                     'hyperparameters': hyperparameters or {},
                     'feature_importance': feature_importance,
-                    'trained_at': pd.Timestamp.now().isoformat()
+                    'completed_at': pd.Timestamp.now().isoformat()
                 }
                 
-                supabase_db.create_model(model_data)
+                created_model = supabase_db.create_model(model_data)
+                
+                # 12. Save metrics to model_metrics table
+                if created_model:
+                    metrics_data = {
+                        'id': f"{model_id}_metrics",
+                        'model_id': model_id,
+                        'accuracy': metrics['accuracy'],
+                        'precision': metrics['precision'],
+                        'recall': metrics['recall'],
+                        'f1_score': metrics['f1_score'],
+                        'auc_roc': metrics['auc_roc']
+                    }
+                    supabase_db.create_model_metrics(metrics_data)
                 
                 logger.info("Model training complete",
                            model_id=model_id,
@@ -175,7 +185,7 @@ class ModelTrainingService:
                     'model_id': model_id,
                     'metrics': metrics,
                     'training_time_seconds': training_time,
-                    'r2_path': r2_model_path
+                    'model_path': r2_model_path
                 }
                 
             finally:

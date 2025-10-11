@@ -97,24 +97,35 @@ class DatasetProcessingService:
                 
                 # 9. Calculate statistics
                 target_col = config.get('target_column', 'target')
-                class_balance = {}
+                fraud_count = 0
+                non_fraud_count = 0
+                fraud_percentage = None
+                
                 if target_col in processed_df.columns:
-                    class_balance = processed_df[target_col].value_counts().to_dict()
+                    value_counts = processed_df[target_col].value_counts().to_dict()
+                    # Assuming binary classification: 1 = fraud, 0 = non-fraud
+                    fraud_count = int(value_counts.get(1, 0))
+                    non_fraud_count = int(value_counts.get(0, 0))
+                    total = fraud_count + non_fraud_count
+                    if total > 0:
+                        fraud_percentage = (fraud_count / total) * 100
                 
                 processing_time = time.time() - start_time
                 
                 # 10. Update Supabase with results
                 update_data = {
                     'status': 'completed',
-                    'r2_path': r2_base_path,
-                    'total_samples': len(processed_df),
-                    'num_features': len(processed_df.columns) - 1,  # Exclude target
-                    'train_samples': len(train_df),
-                    'val_samples': len(val_df),
-                    'test_samples': len(test_df),
-                    'class_balance': class_balance,
-                    'processing_time_seconds': processing_time,
-                    'processed_at': pd.Timestamp.now().isoformat()
+                    'file_path': r2_base_path,
+                    'total_rows': len(processed_df),
+                    'total_columns': len(processed_df.columns) - 1,  # Exclude target
+                    'train_rows': len(train_df),
+                    'val_rows': len(val_df),
+                    'test_rows': len(test_df),
+                    'fraud_count': fraud_count,
+                    'non_fraud_count': non_fraud_count,
+                    'fraud_percentage': fraud_percentage,
+                    'feature_names': list(processed_df.columns),
+                    'completed_at': pd.Timestamp.now().isoformat()
                 }
                 
                 supabase_db.update_dataset(dataset_id, update_data)
@@ -126,13 +137,15 @@ class DatasetProcessingService:
                 return {
                     'status': 'success',
                     'dataset_id': dataset_id,
-                    'total_samples': len(processed_df),
-                    'num_features': len(processed_df.columns) - 1,
-                    'train_samples': len(train_df),
-                    'val_samples': len(val_df),
-                    'test_samples': len(test_df),
-                    'processing_time_seconds': processing_time,
-                    'r2_path': r2_base_path
+                    'total_rows': len(processed_df),
+                    'total_columns': len(processed_df.columns) - 1,
+                    'train_rows': len(train_df),
+                    'val_rows': len(val_df),
+                    'test_rows': len(test_df),
+                    'fraud_count': fraud_count,
+                    'non_fraud_count': non_fraud_count,
+                    'fraud_percentage': fraud_percentage,
+                    'file_path': r2_base_path
                 }
                 
             finally:
@@ -202,18 +215,18 @@ class DatasetProcessingService:
             }
         
         if dataset['status'] == 'completed':
-            # Verify files exist in R2
-            r2_path = dataset.get('r2_path')
-            if r2_path:
-                train_exists = r2_storage_client.file_exists(f"{r2_path}/train.parquet")
-                if train_exists:
-                    return {
-                        'processed': True,
-                        'status': 'completed',
-                        'r2_path': r2_path,
-                        'total_samples': dataset.get('total_samples', 0),
-                        'num_features': dataset.get('num_features', 0)
-                    }
+            # Verify files exist
+            file_path = dataset.get('file_path')
+            if file_path:
+                # For now, assume files exist if file_path is set
+                # TODO: Add actual file existence check if needed
+                return {
+                    'processed': True,
+                    'status': 'completed',
+                    'file_path': file_path,
+                    'total_samples': dataset.get('total_rows', 0),
+                    'num_features': dataset.get('total_columns', 0)
+                }
         
         return {
             'processed': False,

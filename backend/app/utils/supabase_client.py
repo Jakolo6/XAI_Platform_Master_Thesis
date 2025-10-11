@@ -160,6 +160,31 @@ class SupabaseClient:
             logger.error("Failed to update model", model_id=model_id, error=str(e))
             return None
     
+    def create_model_metrics(self, metrics_data: Dict[str, Any]) -> Optional[Dict]:
+        """Create a new model metrics record."""
+        if not self.is_available():
+            return None
+        
+        try:
+            result = self.client.table('model_metrics').insert(metrics_data).execute()
+            logger.info("Model metrics created", model_id=metrics_data.get('model_id'))
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error("Failed to create model metrics", error=str(e))
+            return None
+    
+    def get_model_metrics(self, model_id: str) -> Optional[Dict]:
+        """Get model metrics by model ID."""
+        if not self.is_available():
+            return None
+        
+        try:
+            result = self.client.table('model_metrics').select('*').eq('model_id', model_id).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            logger.error("Failed to get model metrics", model_id=model_id, error=str(e))
+            return None
+    
     # ============================================================
     # EXPLANATIONS
     # ============================================================
