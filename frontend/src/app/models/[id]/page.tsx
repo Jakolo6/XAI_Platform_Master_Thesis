@@ -15,7 +15,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth';
 import { useModelsStore } from '@/store/models';
-import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown } from 'lucide-react';
+import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart } from 'lucide-react';
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
@@ -384,6 +384,123 @@ export default function ModelDetailPage() {
                 <div className="text-sm text-gray-600">Precision</div>
               </div>
             </div>
+
+            {/* Model Configuration & Hyperparameters */}
+            {selectedModel && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="px-6 py-4 border-b">
+                  <div className="flex items-center">
+                    <Settings className="h-5 w-5 text-blue-600 mr-2" />
+                    <h2 className="text-xl font-bold text-gray-900">Model Configuration</h2>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">Training parameters and hyperparameters used</p>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Basic Info */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Model Information</h3>
+                      <div className="flex justify-between items-center py-2 border-b">
+                        <span className="text-gray-600">Algorithm</span>
+                        <span className="font-semibold text-blue-600">{getModelTypeLabel(selectedModel.model_type)}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b">
+                        <span className="text-gray-600">Dataset</span>
+                        <span className="font-semibold">{selectedModel.dataset_id}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b">
+                        <span className="text-gray-600">Version</span>
+                        <span className="font-semibold">{selectedModel.version}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b">
+                        <span className="text-gray-600">Training Time</span>
+                        <span className="font-semibold">{selectedModel.training_time_seconds ? formatDuration(selectedModel.training_time_seconds) : 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">Model Size</span>
+                        <span className="font-semibold">{selectedModel.model_size_mb ? `${selectedModel.model_size_mb.toFixed(2)} MB` : 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {/* Hyperparameters */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Hyperparameters</h3>
+                      {selectedModel.hyperparameters && Object.keys(selectedModel.hyperparameters).length > 0 ? (
+                        <div className="space-y-2">
+                          {Object.entries(selectedModel.hyperparameters).map(([key, value]) => (
+                            <div key={key} className="flex justify-between items-center py-2 border-b">
+                              <span className="text-gray-600 text-sm">{key}</span>
+                              <span className="font-mono text-sm font-semibold">{JSON.stringify(value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-4 text-center">
+                          <p className="text-gray-600 text-sm">Default hyperparameters used</p>
+                          <p className="text-xs text-gray-500 mt-1">No custom parameters specified</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Training Configuration */}
+                  {selectedModel.training_config && (
+                    <div className="mt-6 pt-6 border-t">
+                      <h3 className="font-semibold text-gray-900 mb-3">Training Configuration</h3>
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <pre className="text-xs text-gray-800 overflow-x-auto">
+                          {JSON.stringify(selectedModel.training_config, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Feature Importance */}
+            {selectedModel?.feature_importance && Object.keys(selectedModel.feature_importance).length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="px-6 py-4 border-b">
+                  <div className="flex items-center">
+                    <BarChart3 className="h-5 w-5 text-purple-600 mr-2" />
+                    <h2 className="text-xl font-bold text-gray-900">Feature Importance</h2>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">Top features contributing to model predictions</p>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-3">
+                    {Object.entries(selectedModel.feature_importance)
+                      .sort(([, a], [, b]) => (b as number) - (a as number))
+                      .slice(0, 15)
+                      .map(([feature, importance], index) => (
+                        <div key={feature} className="flex items-center gap-3">
+                          <div className="w-8 text-right text-sm font-semibold text-gray-500">#{index + 1}</div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium text-gray-900">{feature}</span>
+                              <span className="text-sm font-semibold text-blue-600">
+                                {((importance as number) * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                                style={{ width: `${(importance as number) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  {Object.keys(selectedModel.feature_importance).length > 15 && (
+                    <div className="mt-4 text-center text-sm text-gray-500">
+                      Showing top 15 of {Object.keys(selectedModel.feature_importance).length} features
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Performance Chart */}
             <div className="bg-white rounded-lg shadow-sm border">

@@ -7,6 +7,12 @@ interface Model {
   model_type: string;
   version: string;
   status: string;
+  dataset_id?: string;
+  hyperparameters?: Record<string, any>;
+  training_config?: Record<string, any>;
+  training_time_seconds?: number;
+  model_size_mb?: number;
+  feature_importance?: Record<string, number>;
   created_at: string;
   updated_at: string;
 }
