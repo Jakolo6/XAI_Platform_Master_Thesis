@@ -2,9 +2,9 @@
 Application configuration using Pydantic settings.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 import json
 
 
@@ -86,8 +86,14 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     
-    # Note: CORS origins are parsed in main.py to avoid Pydantic validation issues
-    # The validator was causing type conflicts (string vs list)
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def convert_cors_origins_to_string(cls, v):
+        """Convert CORS origins to string format if it's a list (from Railway env vars)."""
+        if isinstance(v, list):
+            # Convert list to comma-separated string
+            return ",".join(v)
+        return v
     
     class Config:
         env_file = ".env"
