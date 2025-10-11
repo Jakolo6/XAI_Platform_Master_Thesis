@@ -3,7 +3,7 @@ Main API router.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, auth, explanations, study, reports, tasks, benchmarks
+from app.api.v1.endpoints import health, auth, explanations, study, reports, tasks, benchmarks, humanstudy
 # Use new simplified endpoints without Celery
 from app.api.v1.endpoints import datasets_new as datasets
 from app.api.v1.endpoints import models_new as models
@@ -20,3 +20,4 @@ api_router.include_router(benchmarks.router, prefix="/benchmarks", tags=["benchm
 api_router.include_router(study.router, prefix="/study", tags=["study"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
+api_router.include_router(humanstudy.router, prefix="/humanstudy", tags=["humanstudy"])
