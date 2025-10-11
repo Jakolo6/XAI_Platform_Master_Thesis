@@ -19,6 +19,8 @@ import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, 
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
+import ROCCurveChart from '@/components/charts/ROCCurveChart';
+import PRCurveChart from '@/components/charts/PRCurveChart';
 import ExplanationViewer from '@/components/explanations/ExplanationViewer';
 import QualityMetrics from '@/components/explanations/QualityMetrics';
 import { explanationsAPI } from '@/lib/api';
@@ -577,6 +579,39 @@ export default function ModelDetailPage() {
                 </div>
                 <div className="p-6">
                   <ConfusionMatrixChart confusionMatrix={selectedMetrics.confusion_matrix} />
+                </div>
+              </div>
+            )}
+
+            {/* ROC Curve */}
+            {selectedMetrics.roc_curve && selectedMetrics.auc_roc && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="px-6 py-4 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">ROC Analysis</h2>
+                  <p className="text-sm text-gray-600 mt-1">Model discrimination ability across all thresholds</p>
+                </div>
+                <div className="p-6">
+                  <ROCCurveChart 
+                    rocCurve={selectedMetrics.roc_curve} 
+                    aucScore={selectedMetrics.auc_roc}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Precision-Recall Curve */}
+            {selectedMetrics.pr_curve && selectedMetrics.auc_pr && (
+              <div className="bg-white rounded-lg shadow-sm border">
+                <div className="px-6 py-4 border-b">
+                  <h2 className="text-xl font-bold text-gray-900">Precision-Recall Analysis</h2>
+                  <p className="text-sm text-gray-600 mt-1">Performance on imbalanced fraud detection task</p>
+                </div>
+                <div className="p-6">
+                  <PRCurveChart 
+                    prCurve={selectedMetrics.pr_curve} 
+                    aucPR={selectedMetrics.auc_pr}
+                    classBalance={selectedModel?.dataset_id === 'ieee-cis-fraud' ? { '0': 398867, '1': 14511 } : undefined}
+                  />
                 </div>
               </div>
             )}

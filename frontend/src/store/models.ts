@@ -34,6 +34,16 @@ interface ModelMetrics {
   };
   expected_calibration_error: number;
   maximum_calibration_error: number;
+  roc_curve?: {
+    fpr: number[];
+    tpr: number[];
+    thresholds: number[];
+  };
+  pr_curve?: {
+    precision: number[];
+    recall: number[];
+    thresholds: number[];
+  };
 }
 
 interface LeaderboardEntry {
