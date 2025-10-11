@@ -3,7 +3,10 @@ Main API router.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, auth, datasets, models, explanations, study, reports, tasks, benchmarks
+from app.api.v1.endpoints import health, auth, explanations, study, reports, tasks, benchmarks
+# Use new simplified endpoints without Celery
+from app.api.v1.endpoints import datasets_new as datasets
+from app.api.v1.endpoints import models_new as models
 
 api_router = APIRouter()
 
