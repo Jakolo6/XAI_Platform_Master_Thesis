@@ -21,6 +21,10 @@ import tempfile
 import shutil
 import argparse
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'backend'))
 
@@ -303,6 +307,10 @@ Examples:
     args = parser.parse_args()
     
     # Check environment variables
+    # Note: SUPABASE_SERVICE_KEY and SUPABASE_SERVICE_ROLE_KEY are the same
+    if not os.getenv('SUPABASE_SERVICE_ROLE_KEY') and os.getenv('SUPABASE_SERVICE_KEY'):
+        os.environ['SUPABASE_SERVICE_ROLE_KEY'] = os.getenv('SUPABASE_SERVICE_KEY')
+    
     required_vars = [
         'KAGGLE_USERNAME',
         'KAGGLE_KEY',
