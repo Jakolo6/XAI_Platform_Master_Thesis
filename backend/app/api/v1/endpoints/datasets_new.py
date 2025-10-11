@@ -24,12 +24,12 @@ class DatasetProcessRequest(BaseModel):
 @router.get("/")
 async def list_datasets(
     skip: int = 0,
-    limit: int = 100,
-    current_user: str = Depends(get_current_researcher)
+    limit: int = 100
 ):
     """
     List all datasets from registry and Supabase.
     Combines registry configuration with processing status.
+    Public endpoint - no authentication required.
     """
     try:
         # Get datasets from registry
@@ -72,10 +72,9 @@ async def list_datasets(
 
 @router.get("/{dataset_id}")
 async def get_dataset(
-    dataset_id: str,
-    current_user: str = Depends(get_current_researcher)
+    dataset_id: str
 ):
-    """Get detailed information about a specific dataset."""
+    """Get detailed information about a specific dataset. Public endpoint."""
     try:
         # Get from registry
         registry = get_dataset_registry()
