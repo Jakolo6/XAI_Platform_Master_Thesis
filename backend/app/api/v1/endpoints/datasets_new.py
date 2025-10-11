@@ -37,8 +37,15 @@ async def list_datasets(
         datasets = []
         
         for dataset_id, config in registry.datasets.items():
-            # Get processing status from Supabase
-            db_dataset = supabase_db.get_dataset(dataset_id)
+            # Get processing status from Supabase (with error handling)
+            db_dataset = None
+            try:
+                if supabase_db.is_available():
+                    db_dataset = supabase_db.get_dataset(dataset_id)
+            except Exception as e:
+                logger.warning("Could not fetch dataset from Supabase", 
+                             dataset_id=dataset_id, 
+                             error=str(e))
             
             # Combine registry config with database status
             dataset_info = {
@@ -86,8 +93,15 @@ async def get_dataset(
                 detail=f"Dataset {dataset_id} not found"
             )
         
-        # Get processing status from Supabase
-        db_dataset = supabase_db.get_dataset(dataset_id)
+        # Get processing status from Supabase (with error handling)
+        db_dataset = None
+        try:
+            if supabase_db.is_available():
+                db_dataset = supabase_db.get_dataset(dataset_id)
+        except Exception as e:
+            logger.warning("Could not fetch dataset from Supabase", 
+                         dataset_id=dataset_id, 
+                         error=str(e))
         
         return {
             "id": dataset_id,
