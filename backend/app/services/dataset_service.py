@@ -82,18 +82,25 @@ class DatasetProcessingService:
                 logger.info("Uploading to R2", dataset_id=dataset_id)
                 r2_base_path = f"datasets/{dataset_id}/processed"
                 
-                r2_storage_client.upload_file(
+                if not r2_storage_client.is_available():
+                    raise RuntimeError("R2 storage is not available. Check R2 credentials in environment variables.")
+                
+                upload_success = True
+                upload_success &= r2_storage_client.upload_file(
                     str(train_path),
                     f"{r2_base_path}/train.parquet"
                 )
-                r2_storage_client.upload_file(
+                upload_success &= r2_storage_client.upload_file(
                     str(val_path),
                     f"{r2_base_path}/val.parquet"
                 )
-                r2_storage_client.upload_file(
+                upload_success &= r2_storage_client.upload_file(
                     str(test_path),
                     f"{r2_base_path}/test.parquet"
                 )
+                
+                if not upload_success:
+                    raise RuntimeError("Failed to upload one or more files to R2 storage")
                 
                 # 9. Calculate statistics
                 target_col = config.get('target_column', 'target')
