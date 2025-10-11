@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/auth';
 import { Brain, TrendingUp, Target, Sparkles, Filter, Download, Loader2 } from 'lucide-react';
 import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
 import TradeOffScatter from '@/components/charts/TradeOffScatter';
-import { researchAPI } from '@/lib/api';
+import { researchAPI, reportsAPI } from '@/lib/api';
 
 // Demo data for prototype
 const DEMO_DATA = {
@@ -115,6 +115,23 @@ export default function ResearchPage() {
     }
   };
 
+  const handleExportLeaderboard = async () => {
+    try {
+      const response = await reportsAPI.exportLeaderboardCSV(selectedDataset !== 'all' ? selectedDataset : undefined);
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `leaderboard_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export leaderboard:', error);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -166,9 +183,12 @@ export default function ResearchPage() {
                 </div>
               </div>
             </div>
-            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={handleExportLeaderboard}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Download className="h-4 w-4 mr-2" />
-              Export Results
+              Export Leaderboard CSV
             </button>
           </div>
         </div>

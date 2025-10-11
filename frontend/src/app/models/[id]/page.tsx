@@ -23,7 +23,7 @@ import ROCCurveChart from '@/components/charts/ROCCurveChart';
 import PRCurveChart from '@/components/charts/PRCurveChart';
 import ExplanationViewer from '@/components/explanations/ExplanationViewer';
 import QualityMetrics from '@/components/explanations/QualityMetrics';
-import { explanationsAPI } from '@/lib/api';
+import { explanationsAPI, reportsAPI } from '@/lib/api';
 import { exportSHAPToCSV, exportLIMEToCSV } from '@/utils/export';
 
 // Enable debug logging in development
@@ -238,6 +238,50 @@ export default function ModelDetailPage() {
       setExplanationError(error.response?.data?.detail || 'Failed to generate local explanation');
     } finally {
       setIsGeneratingLocal(false);
+    }
+  };
+
+  /**
+   * Export model performance report as CSV
+   */
+  const handleExportModelCSV = async () => {
+    if (!modelId) return;
+    
+    try {
+      const response = await reportsAPI.exportModelCSV(modelId);
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `model_${modelId}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      log('Failed to export model CSV:', error);
+    }
+  };
+
+  /**
+   * Export SHAP vs LIME comparison as JSON
+   */
+  const handleExportComparison = async () => {
+    if (!modelId) return;
+    
+    try {
+      const response = await reportsAPI.exportComparisonJSON(modelId);
+      const blob = new Blob([response.data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `comparison_${modelId}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      log('Failed to export comparison:', error);
     }
   };
 
@@ -711,12 +755,21 @@ export default function ModelDetailPage() {
                 Compare Methods
               </Link>
               <button
-                className="flex items-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed"
-                disabled
+                onClick={handleExportModelCSV}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Download Model
+                Export Model Report
               </button>
+              {shapExplanation && limeExplanation && (
+                <button
+                  onClick={handleExportComparison}
+                  className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export Comparison
+                </button>
+              )}
             </div>
 
             {/* Method Switcher */}

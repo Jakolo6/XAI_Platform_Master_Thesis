@@ -145,4 +145,18 @@ export const researchAPI = {
   getTradeOffs: () => api.get('/research/trade-offs'),
 };
 
+export const reportsAPI = {
+  exportModelCSV: (model_id: string) =>
+    api.get(`/reports/model/${model_id}/csv`, { responseType: 'blob' }),
+  
+  exportExplanationCSV: (explanation_id: string) =>
+    api.get(`/reports/explanation/${explanation_id}/csv`, { responseType: 'blob' }),
+  
+  exportLeaderboardCSV: (dataset_id?: string) =>
+    api.get('/reports/leaderboard/csv', { params: { dataset_id }, responseType: 'blob' }),
+  
+  exportComparisonJSON: (model_id: string) =>
+    api.get(`/reports/comparison/${model_id}/json`, { responseType: 'blob' }),
+};
+
 export default api;
