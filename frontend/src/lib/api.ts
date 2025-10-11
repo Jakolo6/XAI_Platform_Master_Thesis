@@ -111,6 +111,9 @@ export const explanationsAPI = {
       params: { model_id, method, config: JSON.stringify(config) } 
     }),
   
+  generateLocal: (data: { model_id: string; sample_index: number; method?: string }) =>
+    api.post('/explanations/local', data),
+  
   getById: (id: string) => api.get(`/explanations/${id}`),
   
   getByModel: (modelId: string) => api.get(`/explanations/model/${modelId}`),

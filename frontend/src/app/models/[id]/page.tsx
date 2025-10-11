@@ -41,6 +41,10 @@ export default function ModelDetailPage() {
   const [shapExplanation, setShapExplanation] = useState<any>(null);
   const [limeExplanation, setLimeExplanation] = useState<any>(null);
   const [selectedMethod, setSelectedMethod] = useState<'shap' | 'lime'>('shap');
+  const [explanationType, setExplanationType] = useState<'global' | 'local'>('global');
+  const [localExplanation, setLocalExplanation] = useState<any>(null);
+  const [sampleIndex, setSampleIndex] = useState<number>(0);
+  const [isGeneratingLocal, setIsGeneratingLocal] = useState(false);
   const [isGeneratingExplanation, setIsGeneratingExplanation] = useState(false);
   const [isGeneratingLime, setIsGeneratingLime] = useState(false);
   const [limeProgress, setLimeProgress] = useState<string>('');
@@ -171,6 +175,32 @@ export default function ModelDetailPage() {
       loadQualityMetrics();
     }
   }, [showQualityMetrics]);
+
+  /**
+   * Generate local (instance-level) SHAP explanation for a specific sample
+   */
+  const handleGenerateLocalExplanation = async () => {
+    if (!modelId) return;
+    
+    setIsGeneratingLocal(true);
+    setExplanationError(null);
+    
+    try {
+      const response = await explanationsAPI.generateLocal({
+        model_id: modelId,
+        sample_index: sampleIndex,
+        method: 'shap'
+      });
+      
+      setLocalExplanation(response.data.explanation);
+      log('Local explanation generated:', response.data);
+    } catch (error: any) {
+      log('Local explanation error:', error);
+      setExplanationError(error.response?.data?.detail || 'Failed to generate local explanation');
+    } finally {
+      setIsGeneratingLocal(false);
+    }
+  };
 
   /**
    * Generate LIME explanation for the current model
@@ -652,39 +682,99 @@ export default function ModelDetailPage() {
 
             {/* Method Switcher */}
             {(shapExplanation || limeExplanation) && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium text-gray-700">View Explanation:</span>
+              <div className="bg-white rounded-lg shadow p-4 space-y-4">
+                {/* Global/Local Toggle */}
+                <div className="flex items-center gap-4 pb-4 border-b">
+                  <span className="text-sm font-medium text-gray-700">Explanation Type:</span>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => setSelectedMethod('shap')}
-                      disabled={!shapExplanation}
+                      onClick={() => setExplanationType('global')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedMethod === 'shap'
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        explanationType === 'global'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      🔮 SHAP
+                      🌍 Global
                     </button>
                     <button
-                      onClick={() => setSelectedMethod('lime')}
-                      disabled={!limeExplanation}
+                      onClick={() => setExplanationType('local')}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedMethod === 'lime'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        explanationType === 'local'
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      🍋 LIME
+                      🎯 Local
                     </button>
                   </div>
-                  {shapExplanation && limeExplanation && (
-                    <span className="text-xs text-green-600 font-medium">
-                      ✓ Both methods available
-                    </span>
-                  )}
+                  <span className="text-xs text-gray-500">
+                    {explanationType === 'global' 
+                      ? 'Average importance across all predictions' 
+                      : 'Explanation for one specific prediction'}
+                  </span>
                 </div>
+
+                {/* Method Switcher (only for global) */}
+                {explanationType === 'global' && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">Method:</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedMethod('shap')}
+                        disabled={!shapExplanation}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedMethod === 'shap'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
+                      >
+                        🔮 SHAP
+                      </button>
+                      <button
+                        onClick={() => setSelectedMethod('lime')}
+                        disabled={!limeExplanation}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          selectedMethod === 'lime'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
+                      >
+                        🍋 LIME
+                      </button>
+                    </div>
+                    {shapExplanation && limeExplanation && (
+                      <span className="text-xs text-green-600 font-medium">
+                        ✓ Both methods available
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Local Explanation Controls */}
+                {explanationType === 'local' && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-gray-700">Sample Index:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="999"
+                      value={sampleIndex}
+                      onChange={(e) => setSampleIndex(parseInt(e.target.value) || 0)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg w-24"
+                    />
+                    <button
+                      onClick={handleGenerateLocalExplanation}
+                      disabled={isGeneratingLocal}
+                      className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 text-sm font-medium"
+                    >
+                      {isGeneratingLocal ? 'Generating...' : 'Generate Local SHAP'}
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      Enter a sample index (0-999) from the test set
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -748,10 +838,82 @@ export default function ModelDetailPage() {
                   </button>
                 </div>
                 <div className="p-6">
-                  <ExplanationViewer 
-                    explanation={selectedMethod === 'shap' ? shapExplanation : limeExplanation} 
-                    type="global"
-                  />
+                  {explanationType === 'global' ? (
+                    <ExplanationViewer 
+                      explanation={selectedMethod === 'shap' ? shapExplanation : limeExplanation} 
+                      type="global"
+                    />
+                  ) : localExplanation ? (
+                    <div className="space-y-6">
+                      {/* Prediction Info */}
+                      <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <div className="text-sm text-gray-600">Prediction</div>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {localExplanation.prediction.class === 1 ? 'Fraud' : 'Not Fraud'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">Probability</div>
+                            <div className="text-2xl font-bold text-orange-600">
+                              {(localExplanation.prediction.probability * 100).toFixed(1)}%
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-sm text-gray-600">True Label</div>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {localExplanation.true_label === 1 ? 'Fraud' : 'Not Fraud'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SHAP Force Plot Data */}
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">Feature Contributions (SHAP Values)</h3>
+                        <div className="space-y-2">
+                          {Object.entries(localExplanation.shap_values)
+                            .sort(([, a]: any, [, b]: any) => Math.abs(b) - Math.abs(a))
+                            .slice(0, 15)
+                            .map(([feature, value]: any) => (
+                              <div key={feature} className="flex items-center gap-2">
+                                <div className="w-32 text-sm font-medium text-gray-700 truncate">
+                                  {feature}
+                                </div>
+                                <div className="flex-1 h-8 bg-gray-100 rounded relative overflow-hidden">
+                                  <div
+                                    className={`absolute h-full ${value > 0 ? 'bg-red-500' : 'bg-blue-500'}`}
+                                    style={{
+                                      width: `${Math.min(Math.abs(value) * 100, 100)}%`,
+                                      left: value > 0 ? '50%' : `${50 - Math.min(Math.abs(value) * 100, 50)}%`
+                                    }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-xs font-medium text-gray-700">
+                                      {value.toFixed(4)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="w-24 text-sm text-gray-600">
+                                  = {localExplanation.feature_values[feature]?.toFixed(2) || 'N/A'}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+
+                      {/* Base Value Info */}
+                      <div className="text-sm text-gray-600">
+                        <strong>Base value:</strong> {localExplanation.base_value.toFixed(4)} 
+                        <span className="ml-2 text-xs">(Expected model output)</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>Select a sample index and click "Generate Local SHAP" to see instance-level explanations</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
