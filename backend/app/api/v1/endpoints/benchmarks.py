@@ -55,33 +55,19 @@ async def get_benchmarks(
                 model_type = model['model_type']
                 
                 if model_type not in models_by_type:
+                    # Metrics are stored directly in the model object
                     models_by_type[model_type] = {
                         'model_id': model['id'],
-                        'auc_roc': None,
-                        'auc_pr': None,
-                        'f1_score': None,
-                        'precision': None,
-                        'recall': None,
-                        'accuracy': None,
+                        'auc_roc': model.get('auc_roc'),
+                        'auc_pr': model.get('auc_pr'),
+                        'f1_score': model.get('f1_score'),
+                        'precision': model.get('precision'),
+                        'recall': model.get('recall'),
+                        'accuracy': model.get('accuracy'),
                         'training_time_seconds': model.get('training_time_seconds'),
                         'model_size_mb': model.get('model_size_mb'),
                         'status': model.get('status')
                     }
-                
-                # Get metrics for this model
-                try:
-                    metrics = supabase.get_model_metrics(model['id'])
-                    if metrics:
-                        models_by_type[model_type].update({
-                            'auc_roc': metrics.get('auc_roc'),
-                            'auc_pr': metrics.get('auc_pr'),
-                            'f1_score': metrics.get('f1_score'),
-                            'precision': metrics.get('precision'),
-                            'recall': metrics.get('recall'),
-                            'accuracy': metrics.get('accuracy')
-                        })
-                except:
-                    pass
             
             benchmarks.append(BenchmarkResponse(
                 dataset_id=dataset_name,
