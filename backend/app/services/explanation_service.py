@@ -19,6 +19,10 @@ logger = structlog.get_logger()
 class ExplanationService:
     """Service for generating and managing model explanations."""
     
+    def __init__(self):
+        """Initialize with cache for explainers."""
+        self._explainer_cache = {}  # Cache explainers by model_id
+    
     def generate_explanation(
         self,
         model_id: str,
@@ -260,6 +264,152 @@ class ExplanationService:
             'explanations': explanations,
             'feature_names': list(X_test.columns)
         }
+    
+    def generate_local_explanation(
+        self,
+        model_id: str,
+        sample_index: int,
+        method: str = "shap"
+    ) -> Dict[str, Any]:
+        """
+        Generate local (instance-level) explanation for a single sample.
+        
+        This is computed on-demand and shows which features contributed
+        to one specific prediction (force plot data).
+        
+        Args:
+            model_id: ID of the trained model
+            sample_index: Index of the sample in test set
+            method: Explanation method ('shap' only for now)
+            
+        Returns:
+            Dictionary with SHAP values, base value, prediction, and feature values
+        """
+        try:
+            logger.info("Generating local explanation",
+                       model_id=model_id,
+                       sample_index=sample_index)
+            
+            # 1. Get model from database
+            model = supabase_db.get_model(model_id)
+            if not model:
+                raise ValueError(f"Model {model_id} not found")
+            
+            # 2. Get dataset
+            dataset_id = model['dataset_id']
+            dataset = supabase_db.get_dataset(dataset_id)
+            if not dataset:
+                raise ValueError(f"Dataset {dataset_id} not found")
+            
+            # 3. Download model and test data from R2
+            temp_dir = Path(f"/tmp/local_exp_{model_id}_{sample_index}")
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                model_path = temp_dir / "model.pkl"
+                test_data_path = temp_dir / "test.parquet"
+                
+                # Download model
+                r2_storage_client.download_file(
+                    model['model_path'],
+                    str(model_path)
+                )
+                
+                # Download test data
+                r2_storage_client.download_file(
+                    f"{dataset['file_path']}/test.parquet",
+                    str(test_data_path)
+                )
+                
+                # Load test data
+                test_df = pd.read_parquet(test_data_path)
+                
+                # Validate sample index
+                if sample_index < 0 or sample_index >= len(test_df):
+                    raise ValueError(f"Sample index {sample_index} out of range [0, {len(test_df)-1}]")
+                
+                # Separate features and target
+                X_test = test_df.iloc[:, :-1]
+                y_test = test_df.iloc[:, -1]
+                
+                # Get the specific sample
+                x_sample = X_test.iloc[sample_index:sample_index+1]
+                y_true = int(y_test.iloc[sample_index])
+                
+                # 4. Load model and create explainer
+                import pickle
+                import shap
+                
+                with open(model_path, 'rb') as f:
+                    trained_model = pickle.load(f)
+                
+                # Get prediction
+                y_pred_proba = trained_model.predict_proba(x_sample)[0]
+                y_pred = int(trained_model.predict(x_sample)[0])
+                
+                # Create explainer (use cache if available)
+                cache_key = f"{model_id}_{model['model_type']}"
+                if cache_key not in self._explainer_cache:
+                    if model['model_type'] in ['xgboost', 'random_forest']:
+                        explainer = shap.TreeExplainer(trained_model)
+                    else:
+                        background = shap.sample(X_test, min(50, len(X_test)))
+                        explainer = shap.KernelExplainer(trained_model.predict_proba, background)
+                    
+                    self._explainer_cache[cache_key] = explainer
+                else:
+                    explainer = self._explainer_cache[cache_key]
+                
+                # Calculate SHAP values for this single sample
+                shap_values = explainer.shap_values(x_sample)
+                
+                # For binary classification, take positive class
+                if isinstance(shap_values, list):
+                    shap_values = shap_values[1]
+                
+                # Get base value (expected value)
+                if hasattr(explainer, 'expected_value'):
+                    base_value = float(explainer.expected_value)
+                    if isinstance(explainer.expected_value, (list, np.ndarray)):
+                        base_value = float(explainer.expected_value[1])
+                else:
+                    base_value = 0.0
+                
+                # Format for force plot
+                feature_values = x_sample.iloc[0].to_dict()
+                shap_dict = {
+                    col: float(shap_values[0, i])
+                    for i, col in enumerate(x_sample.columns)
+                }
+                
+                return {
+                    'sample_index': sample_index,
+                    'feature_values': feature_values,
+                    'shap_values': shap_dict,
+                    'base_value': base_value,
+                    'prediction': {
+                        'class': y_pred,
+                        'probability': float(y_pred_proba[1]),  # Probability of positive class
+                        'probabilities': [float(p) for p in y_pred_proba]
+                    },
+                    'true_label': y_true,
+                    'feature_names': list(x_sample.columns),
+                    'method': 'shap'
+                }
+                
+            finally:
+                # Cleanup
+                import shutil
+                if temp_dir.exists():
+                    shutil.rmtree(temp_dir)
+        
+        except Exception as e:
+            logger.error("Local explanation generation failed",
+                        model_id=model_id,
+                        sample_index=sample_index,
+                        error=str(e),
+                        exc_info=e)
+            raise
 
 
 # Global service instance

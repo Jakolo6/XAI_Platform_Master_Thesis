@@ -22,6 +22,13 @@ class ExplanationRequest(BaseModel):
     sample_size: int = 100
 
 
+class LocalExplanationRequest(BaseModel):
+    """Request schema for local (instance-level) explanations."""
+    model_id: str
+    sample_index: int  # Index of the sample in test set
+    method: str = "shap"
+
+
 @router.post("/generate")
 async def create_explanation(
     request: ExplanationRequest,
@@ -172,3 +179,68 @@ async def compare_explanations(
                     model_id=model_id,
                     error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/local")
+async def generate_local_explanation(
+    request: LocalExplanationRequest,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Generate local (instance-level) SHAP explanation for a single sample.
+    
+    This computes SHAP values on-demand for one specific prediction,
+    showing which features contributed to that individual decision.
+    
+    Args:
+        request: Local explanation request with model_id and sample_index
+        current_user: Authenticated user
+        
+    Returns:
+        Local SHAP explanation with force plot data
+    """
+    try:
+        from app.services.explanation_service import explanation_service
+        import asyncio
+        
+        logger.info("Generating local explanation",
+                   model_id=request.model_id,
+                   sample_index=request.sample_index)
+        
+        # Run with timeout to prevent hanging
+        try:
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    explanation_service.generate_local_explanation,
+                    request.model_id,
+                    request.sample_index,
+                    request.method
+                ),
+                timeout=30.0  # 30 second timeout
+            )
+            
+            return {
+                "status": "success",
+                "model_id": request.model_id,
+                "sample_index": request.sample_index,
+                "method": request.method,
+                "explanation": result
+            }
+            
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=504,
+                detail="Explanation generation timed out. Try a different sample."
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to generate local explanation",
+                    model_id=request.model_id,
+                    sample_index=request.sample_index,
+                    error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate local explanation: {str(e)}"
+        )
