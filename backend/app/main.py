@@ -2,9 +2,10 @@
 FastAPI main application.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import structlog
 
@@ -96,6 +97,27 @@ app.add_middleware(
 
 # GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+# Global exception handler to ensure CORS headers on errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Ensure CORS headers are present even on unhandled exceptions."""
+    logger.error("Unhandled exception", exc_info=exc, path=request.url.path)
+    
+    response = JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"}
+    )
+    
+    # Manually add CORS headers
+    origin = request.headers.get("origin")
+    if origin and origin in cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return response
+
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
