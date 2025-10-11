@@ -39,8 +39,8 @@ export function DatasetSelector({ onSelect, selectedId }: DatasetSelectorProps) 
       const response = await datasetsAPI.getAll();
       const data = response.data;
       
-      // Filter for completed datasets only
-      setDatasets(data.filter((d: Dataset) => d.status === 'completed'));
+      // Show all datasets (pending and completed)
+      setDatasets(data);
     } catch (err: any) {
       console.error('Failed to fetch datasets:', err);
       setError(err.response?.data?.detail || 'Failed to load datasets. Make sure the backend is running.');
