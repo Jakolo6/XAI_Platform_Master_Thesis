@@ -9,7 +9,9 @@ import structlog
 
 from app.api.dependencies import get_current_researcher
 from app.services.explanation_service import explanation_service
+from app.services.quality_metrics_service import quality_metrics_service
 from app.utils.supabase_client import supabase_db
+from app.utils.r2_storage import r2_storage_client
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -243,4 +245,112 @@ async def generate_local_explanation(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate local explanation: {str(e)}"
+        )
+
+
+@router.post("/{explanation_id}/evaluate-quality")
+async def evaluate_explanation_quality(
+    explanation_id: str,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Evaluate quality of an explanation using multiple metrics.
+    
+    Calculates:
+    - Faithfulness: How well explanations reflect the model
+    - Robustness: How stable under perturbations
+    - Complexity: How interpretable/sparse
+    
+    Args:
+        explanation_id: ID of the explanation to evaluate
+        current_user: Authenticated user
+        
+    Returns:
+        Quality metrics scores
+    """
+    try:
+        from pathlib import Path
+        import asyncio
+        
+        logger.info("Evaluating explanation quality", explanation_id=explanation_id)
+        
+        # Get explanation from database
+        explanation = supabase_db.get_explanation(explanation_id)
+        if not explanation:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Explanation {explanation_id} not found"
+            )
+        
+        # Get model
+        model_id = explanation['model_id']
+        model = supabase_db.get_model(model_id)
+        if not model:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Model {model_id} not found"
+            )
+        
+        # Get dataset
+        dataset_id = model['dataset_id']
+        dataset = supabase_db.get_dataset(dataset_id)
+        if not dataset:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Dataset {dataset_id} not found"
+            )
+        
+        # Download model and test data
+        temp_dir = Path(f"/tmp/quality_eval_{explanation_id}")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            model_path = temp_dir / "model.pkl"
+            test_data_path = temp_dir / "test.parquet"
+            
+            r2_storage_client.download_file(model['model_path'], str(model_path))
+            r2_storage_client.download_file(
+                f"{dataset['file_path']}/test.parquet",
+                str(test_data_path)
+            )
+            
+            # Evaluate quality with timeout
+            quality_metrics = await asyncio.wait_for(
+                asyncio.to_thread(
+                    quality_metrics_service.evaluate_explanation_quality,
+                    explanation['explanation_data'],
+                    str(model_path),
+                    str(test_data_path),
+                    50  # Sample size for efficiency
+                ),
+                timeout=60.0  # 60 second timeout
+            )
+            
+            return {
+                "status": "success",
+                "explanation_id": explanation_id,
+                "model_id": model_id,
+                "quality_metrics": quality_metrics
+            }
+            
+        finally:
+            # Cleanup
+            import shutil
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+    
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Quality evaluation timed out"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to evaluate quality",
+                    explanation_id=explanation_id,
+                    error=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to evaluate quality: {str(e)}"
         )
