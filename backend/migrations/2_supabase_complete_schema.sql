@@ -56,32 +56,25 @@ CREATE TABLE models (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     model_type VARCHAR(50) NOT NULL,
-    version VARCHAR(50) DEFAULT '1.0',
+    version VARCHAR(50) NOT NULL,
     dataset_id VARCHAR(255) REFERENCES datasets(id) ON DELETE CASCADE,
     status VARCHAR(50) DEFAULT 'pending',
     hyperparameters JSONB,
     training_config JSONB,
     feature_importance JSONB,
     model_path VARCHAR(500),
-    r2_path VARCHAR(500),
     model_hash VARCHAR(64) UNIQUE,
     model_size_mb FLOAT,
     training_time_seconds FLOAT,
-    accuracy FLOAT,
-    precision FLOAT,
-    recall FLOAT,
-    f1_score FLOAT,
-    auc_roc FLOAT,
-    auc_pr FLOAT,
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ
 );
 
 -- Model Metrics
 CREATE TABLE model_metrics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(255) PRIMARY KEY,
     model_id VARCHAR(255) REFERENCES models(id) ON DELETE CASCADE,
     auc_roc FLOAT,
     auc_pr FLOAT,
@@ -190,12 +183,12 @@ CREATE INDEX idx_datasets_task_type ON datasets(task_type);
 CREATE INDEX idx_models_dataset ON models(dataset_id);
 CREATE INDEX idx_models_type ON models(model_type);
 CREATE INDEX idx_models_status ON models(status);
-CREATE INDEX idx_models_auc_roc ON models(auc_roc DESC);
 CREATE INDEX idx_models_created ON models(created_at DESC);
 CREATE INDEX idx_models_feature_importance ON models USING GIN (feature_importance);
 
 -- Model Metrics
 CREATE INDEX idx_model_metrics_model ON model_metrics(model_id);
+CREATE INDEX idx_model_metrics_auc_roc ON model_metrics(auc_roc DESC);
 
 -- Explanations
 CREATE INDEX idx_explanations_model ON explanations(model_id);
@@ -229,20 +222,21 @@ SELECT
     m.name,
     m.model_type,
     m.dataset_id,
-    m.auc_roc,
-    m.auc_pr,
-    m.f1_score,
-    m.accuracy,
-    m.precision,
-    m.recall,
+    mm.auc_roc,
+    mm.auc_pr,
+    mm.f1_score,
+    mm.accuracy,
+    mm.precision,
+    mm.recall,
     m.training_time_seconds,
     m.model_size_mb,
     m.created_at,
-    RANK() OVER (PARTITION BY m.dataset_id ORDER BY m.auc_roc DESC NULLS LAST) as rank_in_dataset,
-    RANK() OVER (ORDER BY m.auc_roc DESC NULLS LAST) as global_rank
+    RANK() OVER (PARTITION BY m.dataset_id ORDER BY mm.auc_roc DESC NULLS LAST) as rank_in_dataset,
+    RANK() OVER (ORDER BY mm.auc_roc DESC NULLS LAST) as global_rank
 FROM models m
+LEFT JOIN model_metrics mm ON m.id = mm.model_id
 WHERE m.status = 'completed'
-ORDER BY m.auc_roc DESC NULLS LAST;
+ORDER BY mm.auc_roc DESC NULLS LAST;
 
 -- Human Evaluation Summary
 CREATE VIEW human_evaluation_summary AS
@@ -273,10 +267,11 @@ SELECT
     d.class_balance,
     COUNT(DISTINCT m.id) as num_models,
     COUNT(DISTINCT e.id) as num_explanations,
-    MAX(m.auc_roc) as best_auc_roc,
+    MAX(mm.auc_roc) as best_auc_roc,
     AVG(m.training_time_seconds) as avg_training_time
 FROM datasets d
 LEFT JOIN models m ON d.id = m.dataset_id AND m.status = 'completed'
+LEFT JOIN model_metrics mm ON m.id = mm.model_id
 LEFT JOIN explanations e ON d.id = e.dataset_id
 GROUP BY d.id, d.name, d.num_samples, d.num_features, d.num_classes, d.class_balance;
 
