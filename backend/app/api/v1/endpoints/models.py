@@ -31,7 +31,19 @@ async def list_models(
     """List all trained models, optionally filtered by dataset."""
     try:
         models = supabase_db.list_models(dataset_id=dataset_id)
-        return models
+        
+        # Enrich each model with its metrics
+        enriched_models = []
+        for model in models:
+            metrics = supabase_db.get_model_metrics(model['id'])
+            if metrics:
+                # Merge metrics into model object
+                model_with_metrics = {**model, **metrics}
+            else:
+                model_with_metrics = model
+            enriched_models.append(model_with_metrics)
+        
+        return enriched_models
     except Exception as e:
         logger.error("Failed to list models", exc_info=e)
         return []
@@ -51,6 +63,11 @@ async def get_model(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Model {model_id} not found"
             )
+        
+        # Enrich with metrics
+        metrics = supabase_db.get_model_metrics(model_id)
+        if metrics:
+            model = {**model, **metrics}
         
         return model
     
@@ -132,7 +149,18 @@ async def list_models_for_dataset(
     """List all models trained on a specific dataset."""
     try:
         models = supabase_db.list_models(dataset_id=dataset_id)
-        return models
+        
+        # Enrich each model with its metrics
+        enriched_models = []
+        for model in models:
+            metrics = supabase_db.get_model_metrics(model['id'])
+            if metrics:
+                model_with_metrics = {**model, **metrics}
+            else:
+                model_with_metrics = model
+            enriched_models.append(model_with_metrics)
+        
+        return enriched_models
     except Exception as e:
         logger.error("Failed to list models for dataset",
                     dataset_id=dataset_id,
