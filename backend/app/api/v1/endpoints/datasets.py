@@ -175,12 +175,13 @@ async def process_dataset(
         # Ensure dataset exists in Supabase
         db_dataset = supabase_db.get_dataset(dataset_id)
         if not db_dataset:
-            # Create initial record
+            # Create initial record with all required fields
             supabase_db.create_dataset({
                 'id': dataset_id,
                 'name': dataset_id,
-                'display_name': config.get('display_name', dataset_id),
                 'description': config.get('description', ''),
+                'source': config.get('source', 'kaggle'),
+                'source_identifier': config.get('kaggle_dataset') or config.get('kaggle_competition'),
                 'status': 'pending'
             })
         
