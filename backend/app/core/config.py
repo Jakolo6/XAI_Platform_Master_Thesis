@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     # API
     API_V1_PREFIX: str = "/api/v1"
     BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000,https://xai-working-project.netlify.app"
+    ALLOWED_ORIGINS: str = ""  # Alternative env var for Railway
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://xai_user:xai_password@localhost:5432/xai_finance_db"

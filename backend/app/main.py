@@ -70,13 +70,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
+# CORS middleware - Parse origins properly
+# Check ALLOWED_ORIGINS first (Railway), then BACKEND_CORS_ORIGINS
+if settings.ALLOWED_ORIGINS:
+    cors_origins = settings.ALLOWED_ORIGINS
+    logger.info("Using ALLOWED_ORIGINS from environment")
+else:
+    cors_origins = settings.BACKEND_CORS_ORIGINS
+    logger.info("Using BACKEND_CORS_ORIGINS from config")
+
+if isinstance(cors_origins, str):
+    # If it's still a string, split by comma
+    cors_origins = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+
+logger.info("Setting up CORS middleware", origins=cors_origins, origins_count=len(cors_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # GZip compression
