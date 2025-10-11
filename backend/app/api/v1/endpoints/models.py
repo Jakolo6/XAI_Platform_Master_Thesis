@@ -191,6 +191,7 @@ async def get_model(
         "version": model.version,
         "hyperparameters": model.hyperparameters,
         "training_config": model.training_config,
+        "feature_importance": model.feature_importance,
         "model_path": model.model_path,
         "model_hash": model.model_hash,
         "model_size_mb": model.model_size_mb,
@@ -221,17 +222,22 @@ async def get_model_metrics(
             detail="Model metrics not found"
         )
     
-    return ModelMetricsResponse(
-        model_id=metrics.model_id,
-        auc_roc=metrics.auc_roc,
-        auc_pr=metrics.auc_pr,
-        f1_score=metrics.f1_score,
-        precision=metrics.precision,
-        recall=metrics.recall,
-        accuracy=metrics.accuracy,
-        log_loss=metrics.log_loss,
-        brier_score=metrics.brier_score
-    )
+    return {
+        "model_id": metrics.model_id,
+        "auc_roc": metrics.auc_roc,
+        "auc_pr": metrics.auc_pr,
+        "f1_score": metrics.f1_score,
+        "precision": metrics.precision,
+        "recall": metrics.recall,
+        "accuracy": metrics.accuracy,
+        "log_loss": metrics.log_loss,
+        "brier_score": metrics.brier_score,
+        "confusion_matrix": metrics.confusion_matrix,
+        "expected_calibration_error": metrics.expected_calibration_error,
+        "maximum_calibration_error": metrics.maximum_calibration_error,
+        "roc_curve": metrics.roc_curve,
+        "pr_curve": metrics.pr_curve
+    }
 
 
 @router.get("/leaderboard/performance", response_model=List[Dict[str, Any]])

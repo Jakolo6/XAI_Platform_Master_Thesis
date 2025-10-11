@@ -118,6 +118,9 @@ def train_model(
         # Evaluate model
         metrics = trainer.evaluate(X_test, y_test)
         
+        # Get feature importance
+        feature_importance = trainer.get_feature_importance(X_train.columns.tolist(), top_n=20)
+        
         # Save model locally
         model_dir = Path(f"data/models/{model_id}")
         model_dir.mkdir(parents=True, exist_ok=True)
@@ -149,6 +152,7 @@ def train_model(
                     model.model_size_mb = model_size_mb
                     model.training_time_seconds = training_results["training_time_seconds"]
                     model.hyperparameters = trainer.hyperparameters
+                    model.feature_importance = feature_importance
                     
                     if optimization_results:
                         model.training_config = {
@@ -156,10 +160,15 @@ def train_model(
                             "optimization_results": optimization_results
                         }
                     
-                    # Save metrics
+                    # Save metrics (extract ROC/PR curves before passing to ModelMetrics)
+                    roc_curve = metrics.pop("roc_curve", None)
+                    pr_curve = metrics.pop("pr_curve", None)
+                    
                     model_metrics = ModelMetrics(
                         id=str(uuid.uuid4()),
                         model_id=model_id,
+                        roc_curve=roc_curve,
+                        pr_curve=pr_curve,
                         **metrics
                     )
                     db.add(model_metrics)

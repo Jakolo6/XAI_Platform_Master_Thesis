@@ -223,12 +223,84 @@ class ModelTrainer:
             metrics["expected_calibration_error"] = None
             metrics["maximum_calibration_error"] = None
         
+        # ROC curve data
+        try:
+            from sklearn.metrics import roc_curve, precision_recall_curve
+            fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred_proba)
+            precision_curve, recall_curve, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
+            
+            # Sample points to reduce data size (keep 100 points)
+            n_points = min(100, len(fpr))
+            indices = np.linspace(0, len(fpr) - 1, n_points, dtype=int)
+            
+            metrics["roc_curve"] = {
+                "fpr": [float(fpr[i]) for i in indices],
+                "tpr": [float(tpr[i]) for i in indices],
+                "thresholds": [float(roc_thresholds[i]) for i in indices]
+            }
+            
+            # Sample PR curve points
+            n_points_pr = min(100, len(precision_curve))
+            indices_pr = np.linspace(0, len(precision_curve) - 1, n_points_pr, dtype=int)
+            
+            metrics["pr_curve"] = {
+                "precision": [float(precision_curve[i]) for i in indices_pr],
+                "recall": [float(recall_curve[i]) for i in indices_pr],
+                "thresholds": [float(pr_thresholds[i]) for i in indices_pr if i < len(pr_thresholds)]
+            }
+        except Exception as e:
+            logger.warning("ROC curve calculation failed", exc_info=e)
+            metrics["roc_curve"] = None
+            metrics["pr_curve"] = None
+        
         logger.info("Model evaluation complete",
                    model_type=self.model_type,
                    auc_roc=metrics["auc_roc"],
                    f1_score=metrics["f1_score"])
         
         return metrics
+    
+    def get_feature_importance(self, feature_names: list, top_n: int = 20) -> Dict[str, float]:
+        """
+        Get feature importance scores.
+        
+        Args:
+            feature_names: List of feature names
+            top_n: Number of top features to return
+            
+        Returns:
+            Dictionary mapping feature names to importance scores
+        """
+        if self.model is None:
+            raise ValueError("Model must be trained before getting feature importance")
+        
+        try:
+            # Get feature importance based on model type
+            if hasattr(self.model, 'feature_importances_'):
+                # Tree-based models (XGBoost, Random Forest, LightGBM, CatBoost)
+                importances = self.model.feature_importances_
+            elif hasattr(self.model, 'coef_'):
+                # Linear models (Logistic Regression)
+                importances = np.abs(self.model.coef_[0])
+            else:
+                logger.warning("Model does not support feature importance")
+                return {}
+            
+            # Normalize to sum to 1
+            importances = importances / importances.sum()
+            
+            # Create feature importance dictionary
+            feature_importance = dict(zip(feature_names, importances))
+            
+            # Sort by importance and get top N
+            sorted_features = sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+            top_features = dict(sorted_features[:top_n])
+            
+            return top_features
+            
+        except Exception as e:
+            logger.error("Failed to get feature importance", exc_info=e)
+            return {}
     
     def optimize_hyperparameters(
         self,

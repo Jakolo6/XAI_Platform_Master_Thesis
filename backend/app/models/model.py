@@ -41,6 +41,7 @@ class Model(Base):
     
     # Training metrics
     training_time_seconds = Column(Float)
+    feature_importance = Column(JSON)  # Feature importance scores
     
     # Error tracking
     error_message = Column(String)
@@ -75,6 +76,10 @@ class ModelMetrics(Base):
     
     # Confusion matrix
     confusion_matrix = Column(JSON)
+    
+    # ROC curve data
+    roc_curve = Column(JSON)  # {fpr: [...], tpr: [...], thresholds: [...]}
+    pr_curve = Column(JSON)  # {precision: [...], recall: [...], thresholds: [...]}
     
     # Per-class metrics
     class_metrics = Column(JSON)
