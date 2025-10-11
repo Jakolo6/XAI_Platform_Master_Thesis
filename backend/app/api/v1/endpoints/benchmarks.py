@@ -34,7 +34,7 @@ async def get_benchmarks(
         supabase = get_supabase_client()
         
         # Get all datasets
-        datasets = supabase.get_datasets(is_active=True)
+        datasets = supabase.get_datasets()
         
         # Get all models with metrics
         models = supabase.get_models()
