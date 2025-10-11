@@ -15,7 +15,10 @@ import uuid
 import random
 
 from app.core.database import get_db
-from app.core.logger import logger
+import logging
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 # Placeholder auth functions (replace with actual auth when implemented)
 async def get_current_user():
