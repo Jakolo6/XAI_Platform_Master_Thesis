@@ -86,14 +86,8 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def parse_cors_origins(cls, v):
-        if isinstance(v, str):
-            # Try JSON first, then comma-separated
-            if v.startswith('['):
-                return json.loads(v)
-            return [origin.strip() for origin in v.split(',')]
-        return v
+    # Note: CORS origins are parsed in main.py to avoid Pydantic validation issues
+    # The validator was causing type conflicts (string vs list)
     
     class Config:
         env_file = ".env"
