@@ -121,7 +121,7 @@ export const explanationsAPI = {
   compare: (modelId: string) => api.get(`/explanations/compare/${modelId}`),
   
   evaluateQuality: (explanationId: string) => 
-    api.post(`/explanations/evaluate-quality/${explanationId}`),
+    api.post(`/explanations/${explanationId}/evaluate-quality`),
   
   getQuality: (evalId: string) => api.get(`/explanations/quality/${evalId}`),
 };
