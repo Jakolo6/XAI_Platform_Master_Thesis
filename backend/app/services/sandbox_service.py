@@ -96,7 +96,7 @@ class SandboxService:
             if not supabase_db.is_available():
                 raise ValueError("Supabase not available")
             
-            result = supabase_db.client.table('models').select('*').eq('model_id', model_id).execute()
+            result = supabase_db.client.table('models').select('*').eq('id', model_id).execute()
             
             if not result.data or len(result.data) == 0:
                 raise ValueError(f"Model {model_id} not found in database")
@@ -175,7 +175,7 @@ class SandboxService:
             if not supabase_db.is_available():
                 raise ValueError("Supabase not available")
             
-            result = supabase_db.client.table('models').select('*').eq('model_id', model_id).execute()
+            result = supabase_db.client.table('models').select('*').eq('id', model_id).execute()
             
             if not result.data or len(result.data) == 0:
                 raise ValueError(f"Model {model_id} not found")
@@ -269,7 +269,7 @@ class SandboxService:
             if not supabase_db.is_available():
                 raise ValueError("Supabase not available")
             
-            result = supabase_db.client.table('models').select('*').eq('model_id', model_id).execute()
+            result = supabase_db.client.table('models').select('*').eq('id', model_id).execute()
             
             if not result.data or len(result.data) == 0:
                 raise ValueError(f"Model {model_id} not found")
