@@ -1,9 +1,9 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState } from 'react';
 import { FileText, Brain, MessageSquare, AlertCircle, CheckCircle2, Info, Sparkles } from 'lucide-react';
-
-export const dynamic = 'force-dynamic';
 
 export default function InterpretationLayerPage() {
   const [selectedExample, setSelectedExample] = useState<'shap' | 'lime' | null>(null);

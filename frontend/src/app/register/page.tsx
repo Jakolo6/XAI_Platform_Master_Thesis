@@ -5,6 +5,15 @@
  * User registration page with Supabase authentication
  */
 
+'use client'
+
+export const dynamic = 'force-dynamic'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
+import { UserPlus, Mail, Lock, User, ArrowRight } from 'lucide-react'
 import AuthForm from '@/components/AuthForm'
 
 export default function RegisterPage() {
