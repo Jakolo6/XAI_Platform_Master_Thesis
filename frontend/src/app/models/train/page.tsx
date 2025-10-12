@@ -94,7 +94,7 @@ export default function TrainModelPage() {
       setTrainingResult(result);
       
       // Show success message and navigate to model detail
-      setStep(4); // Move to success step
+      setStep(5); // Move to success step
     } catch (error: any) {
       console.error('Training failed:', error);
       console.error('Error response:', error.response?.data);
@@ -140,7 +140,7 @@ export default function TrainModelPage() {
 
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-12">
-          {[1, 2, 3].map((s, idx) => (
+          {[1, 2, 3, 4].map((s, idx) => (
             <div key={s} className="flex items-center">
               <div className={`
                 flex items-center justify-center w-12 h-12 rounded-full font-bold text-lg
@@ -153,7 +153,7 @@ export default function TrainModelPage() {
                 {step > s ? <CheckCircle2 className="h-6 w-6" /> : s}
               </div>
               
-              {idx < 2 && (
+              {idx < 3 && (
                 <div className={`
                   w-24 h-1 mx-2 transition-all duration-300
                   ${step > s ? 'bg-blue-600' : 'bg-gray-200'}
@@ -272,12 +272,149 @@ export default function TrainModelPage() {
             </div>
           )}
 
-          {/* Step 3: Confirm & Train */}
+          {/* Step 3: Configure Hyperparameters */}
           {step === 3 && (
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Step 3: Confirm & Train
+                  Step 3: Configure Hyperparameters
+                </h2>
+                <p className="text-gray-600">
+                  Adjust model parameters or use defaults
+                </p>
+              </div>
+
+              {/* Hyperparameter Configuration */}
+              <div className="space-y-6">
+                {selectedModel === 'xgboost' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Learning Rate
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={hyperparameters.learning_rate || 0.1}
+                        onChange={(e) => setHyperparameters({...hyperparameters, learning_rate: parseFloat(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 0.1</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Max Depth
+                      </label>
+                      <input
+                        type="number"
+                        value={hyperparameters.max_depth || 6}
+                        onChange={(e) => setHyperparameters({...hyperparameters, max_depth: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 6</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Number of Estimators
+                      </label>
+                      <input
+                        type="number"
+                        value={hyperparameters.n_estimators || 100}
+                        onChange={(e) => setHyperparameters({...hyperparameters, n_estimators: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 100</p>
+                    </div>
+                  </>
+                )}
+
+                {selectedModel === 'lightgbm' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Learning Rate
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={hyperparameters.learning_rate || 0.1}
+                        onChange={(e) => setHyperparameters({...hyperparameters, learning_rate: parseFloat(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 0.1</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Number of Leaves
+                      </label>
+                      <input
+                        type="number"
+                        value={hyperparameters.num_leaves || 31}
+                        onChange={(e) => setHyperparameters({...hyperparameters, num_leaves: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 31</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Number of Estimators
+                      </label>
+                      <input
+                        type="number"
+                        value={hyperparameters.n_estimators || 100}
+                        onChange={(e) => setHyperparameters({...hyperparameters, n_estimators: parseInt(e.target.value)})}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Default: 100</p>
+                    </div>
+                  </>
+                )}
+
+                {(selectedModel === 'random_forest' || selectedModel === 'catboost' || selectedModel === 'logistic_regression' || selectedModel === 'mlp') && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-blue-800">
+                      Using default hyperparameters for {modelTypes.find(m => m.id === selectedModel)?.name}.
+                      Advanced configuration coming soon!
+                    </p>
+                  </div>
+                )}
+
+                {/* Reset to Defaults Button */}
+                <div className="pt-4">
+                  <button
+                    onClick={() => setHyperparameters({})}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Reset to Defaults
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-between">
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  Back
+                </button>
+                <button
+                  onClick={() => setStep(4)}
+                  className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Continue
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Confirm & Train */}
+          {step === 4 && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  Step 4: Confirm & Train
                 </h2>
                 <p className="text-gray-600">
                   Review your selections and start training
@@ -300,8 +437,20 @@ export default function TrainModelPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Hyperparameters:</span>
-                    <span className="font-medium text-gray-900">Default</span>
+                    <span className="font-medium text-gray-900">
+                      {Object.keys(hyperparameters).length > 0 ? 'Custom' : 'Default'}
+                    </span>
                   </div>
+                  {Object.keys(hyperparameters).length > 0 && (
+                    <div className="pl-4 pt-2 space-y-1">
+                      {Object.entries(hyperparameters).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-sm">
+                          <span className="text-gray-500">{key}:</span>
+                          <span className="text-gray-700">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -334,7 +483,7 @@ export default function TrainModelPage() {
               {/* Actions */}
               <div className="flex justify-between">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(3)}
                   disabled={training}
                   className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
@@ -353,8 +502,8 @@ export default function TrainModelPage() {
             </div>
           )}
 
-          {/* Step 4: Success */}
-          {step === 4 && trainingResult && (
+          {/* Step 5: Success */}
+          {step === 5 && trainingResult && (
             <div>
               <div className="text-center py-12">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
