@@ -134,14 +134,32 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
-              href="/datasets"
+              href="/models"
               className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Database className="h-6 w-6 text-blue-600" />
+                  <Brain className="h-6 w-6 text-blue-600" />
                 </div>
                 <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                View Models
+              </h3>
+              <p className="text-sm text-gray-600">
+                Browse all trained models and view performance metrics
+              </p>
+            </Link>
+
+            <Link
+              href="/datasets"
+              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Database className="h-6 w-6 text-orange-600" />
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Manage Datasets
