@@ -7,10 +7,48 @@ from typing import Dict, Any
 import structlog
 
 from app.services.kaggle_service import kaggle_service
+from app.services.r2_service import r2_service
 from app.utils.supabase_client import supabase_db
 
 router = APIRouter()
 logger = structlog.get_logger()
+
+
+@router.get("/status")
+async def get_dataset_status():
+    """
+    Check dataset status in R2 and Supabase.
+    """
+    try:
+        # Check if files exist in R2
+        files_in_r2 = False
+        if r2_service.is_configured():
+            files_in_r2 = r2_service.file_exists("home-credit/raw/application_train.csv")
+        
+        # Check if processed in Supabase
+        processed_in_supabase = False
+        try:
+            result = supabase_db.table('datasets').select('id').eq('id', 'home-credit-default-risk').execute()
+            processed_in_supabase = result.data and len(result.data) > 0
+        except Exception:
+            pass
+        
+        return {
+            "files_in_r2": files_in_r2,
+            "processed_in_supabase": processed_in_supabase,
+            "needs_download": not files_in_r2,
+            "needs_preprocessing": files_in_r2 and not processed_in_supabase,
+            "ready": processed_in_supabase
+        }
+    except Exception as e:
+        logger.error("Failed to check status", error=str(e))
+        return {
+            "files_in_r2": False,
+            "processed_in_supabase": False,
+            "needs_download": True,
+            "needs_preprocessing": False,
+            "ready": False
+        }
 
 
 @router.post("/download")

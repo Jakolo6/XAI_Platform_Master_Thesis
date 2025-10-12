@@ -68,30 +68,50 @@ export default function HomeCreditDatasetPage() {
 
   const checkDatasetStatus = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/datasets/home-credit/eda/home-credit-default-risk`);
+      // First check status endpoint
+      const statusResponse = await axios.get(`${API_BASE}/datasets/home-credit/status`);
       
-      if (response.data) {
+      if (statusResponse.data.ready) {
+        // Data is in Supabase, load it
+        const edaResponse = await axios.get(`${API_BASE}/datasets/home-credit/eda/home-credit-default-risk`);
+        
+        if (edaResponse.data) {
+          setStatus({
+            downloaded: true,
+            processed: true,
+            n_samples: edaResponse.data.n_samples,
+            n_features: edaResponse.data.n_features,
+            train_size: edaResponse.data.train_size,
+            val_size: edaResponse.data.val_size,
+            test_size: edaResponse.data.test_size
+          });
+          
+          setEdaStats({
+            distributions: edaResponse.data.eda_stats?.distributions || {},
+            correlations: edaResponse.data.eda_stats?.correlations || {},
+            missing_values: edaResponse.data.eda_stats?.missing_values || {},
+            target_distribution: edaResponse.data.target_distribution || { class_0: 0, class_1: 0 }
+          });
+          
+          console.log('✅ Dataset loaded from Supabase!');
+        }
+      } else if (statusResponse.data.needs_preprocessing) {
+        // Files in R2 but not processed
         setStatus({
           downloaded: true,
-          processed: true,
-          n_samples: response.data.n_samples,
-          n_features: response.data.n_features,
-          train_size: response.data.train_size,
-          val_size: response.data.val_size,
-          test_size: response.data.test_size
+          processed: false
         });
-        
-        setEdaStats({
-          distributions: response.data.eda_stats?.distributions || {},
-          correlations: response.data.eda_stats?.correlations || {},
-          missing_values: response.data.eda_stats?.missing_values || {},
-          target_distribution: response.data.target_distribution || { class_0: 0, class_1: 0 }
+        console.log('⚠️ Files in R2, but not processed yet. Click "Preprocess Dataset"');
+      } else {
+        // Need to download
+        setStatus({
+          downloaded: false,
+          processed: false
         });
-        
-        console.log('Dataset loaded from Supabase!', response.data);
+        console.log('📥 Need to download dataset first');
       }
     } catch (error) {
-      console.log('Dataset not ready yet - needs preprocessing');
+      console.log('❌ Error checking status:', error);
     }
   };
 
