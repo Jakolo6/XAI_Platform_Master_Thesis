@@ -1,9 +1,9 @@
 /**
- * EXPLAINABILITY SANDBOX
+ * EXPLAINABLE AI
  * Route: /sandbox
  * 
- * Interactive exploration and interpretation of XAI explanations
- * Helps users understand, interpret, and communicate model decisions
+ * Generate and compare SHAP and LIME explanations for trained models
+ * Visualize global and local feature importance with side-by-side comparison
  * Compares SHAP vs LIME for the same prediction with human-readable insights
  */
 
@@ -56,7 +56,7 @@ interface ExplanationData {
   base_value?: number;
 }
 
-export default function ExplainabilitySandbox() {
+export default function ExplainableAI() {
   const router = useRouter();
   
   // State
@@ -246,9 +246,9 @@ export default function ExplainabilitySandbox() {
                 <Lightbulb className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Explainability Sandbox</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Explainable AI</h1>
                 <p className="text-gray-600 mt-1">
-                  Explore, interpret, and understand AI explanations interactively
+                  Generate and compare SHAP and LIME explanations for your trained models
                 </p>
               </div>
             </div>
