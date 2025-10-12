@@ -1,17 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { DatasetSelector } from '@/components/datasets/DatasetSelector';
 import { Play, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { modelsAPI } from '@/lib/api';
 
 export default function TrainModelPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedDataset, setSelectedDataset] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [hyperparameters, setHyperparameters] = useState<Record<string, any>>({});
   const [training, setTraining] = useState(false);
   const [trainingResult, setTrainingResult] = useState<any>(null);
+
+  // Pre-select dataset from URL parameter
+  useEffect(() => {
+    const datasetParam = searchParams.get('dataset');
+    if (datasetParam) {
+      setSelectedDataset(datasetParam);
+      setStep(2); // Auto-advance to model selection
+    }
+  }, [searchParams]);
 
   const modelTypes = [
     { 
@@ -78,7 +90,8 @@ export default function TrainModelPage() {
       const result = response.data;
       setTrainingResult(result);
       
-      alert(`Training started!\n\nModel ID: ${result.model_id}\nTask ID: ${result.task_id}\n\nCheck the models page to monitor progress.`);
+      // Show success message and navigate to model detail
+      setStep(4); // Move to success step
     } catch (error: any) {
       console.error('Training failed:', error);
       const errorMsg = error.response?.data?.detail || 'Failed to start training. Make sure the backend is running and the dataset is processed.';
@@ -316,6 +329,63 @@ export default function TrainModelPage() {
                   <Play className="h-5 w-5 mr-2" />
                   {training ? 'Starting Training...' : 'Start Training'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Success */}
+          {step === 4 && trainingResult && (
+            <div>
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-6">
+                  <CheckCircle2 className="h-10 w-10 text-green-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  Training Started Successfully!
+                </h2>
+                <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                  Your model is now training. SHAP explanations will be automatically generated when training completes.
+                </p>
+
+                <div className="bg-gray-50 rounded-lg p-6 mb-8 max-w-md mx-auto">
+                  <div className="space-y-3 text-left">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Model ID:</span>
+                      <code className="font-mono text-sm bg-white px-2 py-1 rounded">{trainingResult.model_id}</code>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Dataset:</span>
+                      <span className="font-medium text-gray-900">{selectedDataset}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Model Type:</span>
+                      <span className="font-medium text-gray-900">
+                        {modelTypes.find(m => m.id === selectedModel)?.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 justify-center">
+                  <button
+                    onClick={() => router.push(`/models/${trainingResult.model_id}`)}
+                    className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View Model Details
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setStep(1);
+                      setSelectedDataset('');
+                      setSelectedModel('');
+                      setTrainingResult(null);
+                    }}
+                    className="flex items-center px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Train Another Model
+                  </button>
+                </div>
               </div>
             </div>
           )}
