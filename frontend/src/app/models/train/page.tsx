@@ -97,7 +97,24 @@ export default function TrainModelPage() {
       setStep(4); // Move to success step
     } catch (error: any) {
       console.error('Training failed:', error);
-      const errorMsg = error.response?.data?.detail || 'Failed to start training. Make sure the backend is running and the dataset is processed.';
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      let errorMsg = 'Failed to start training.';
+      
+      if (error.response?.data?.detail) {
+        errorMsg = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      // Add helpful context
+      if (error.response?.status === 400) {
+        errorMsg += '\n\nPossible issues:\n- Dataset not processed yet\n- Invalid model type\n- Backend not running';
+      }
+      
       alert(errorMsg);
     } finally {
       setTraining(false);
