@@ -10,7 +10,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth';
 import { FileDown, Download, FileText, Database, BarChart3, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { reportsAPI, researchAPI } from '@/lib/api';
 
@@ -18,18 +17,13 @@ export const dynamic = 'force-dynamic';
 
 export default function ReportsPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
   const [models, setModels] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [exportStatus, setExportStatus] = useState<{ [key: string]: 'idle' | 'loading' | 'success' }>({});
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
     fetchModels();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const fetchModels = async () => {
     setIsLoading(true);
@@ -99,13 +93,7 @@ export default function ReportsPage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  // Auth is handled by middleware
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">

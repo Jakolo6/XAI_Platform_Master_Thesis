@@ -10,7 +10,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth';
 import { Brain, Download, Filter, TrendingUp, Sparkles, Target, Loader2 } from 'lucide-react';
 import TradeOffScatter from '@/components/charts/TradeOffScatter';
 import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
@@ -86,7 +85,6 @@ const DEMO_DATA = {
 
 export default function ResearchPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
   const [selectedDataset, setSelectedDataset] = useState<string>('all');
   const [selectedMethod, setSelectedMethod] = useState<string>('all');
   const [showParetoFrontier, setShowParetoFrontier] = useState(true);
@@ -94,12 +92,8 @@ export default function ResearchPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
     fetchLeaderboardData();
-  }, [isAuthenticated, router]);
+  }, []);
 
   const fetchLeaderboardData = async () => {
     setIsLoading(true);
@@ -132,13 +126,7 @@ export default function ResearchPage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  // Auth is handled by middleware, no need for client-side check
 
   // Use real data or fallback to demo
   const modelsData = leaderboardData?.models || DEMO_DATA.models;
