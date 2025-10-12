@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     
     # API
     API_V1_PREFIX: str = "/api/v1"
-    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000,https://xai-working-project.netlify.app"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:8000,https://xai-working-project.netlify.app,https://xai-platform-master-thesis.netlify.app,https://*.netlify.app"
     ALLOWED_ORIGINS: str = ""  # Alternative env var for Railway
     
     # Database
