@@ -18,8 +18,8 @@
 8. **Supabase Schema** - Aligned with existing database structure
 
 ### ⏳ **IN PROGRESS:**
-- Railway redeploying with full integration (2-3 minutes)
-- Ready to test complete flow: Download → R2 → Process → Supabase
+- Railway redeploying with CORS fix (2-3 minutes)
+- After redeploy: CORS error will be fixed, preprocessing will work!
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE)
