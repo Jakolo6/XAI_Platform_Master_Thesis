@@ -2,13 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DatasetSelector } from '@/components/datasets/DatasetSelector';
 import { Play, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { modelsAPI } from '@/lib/api';
 
-export default function TrainModelPage() {
+function TrainModelContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -578,5 +578,13 @@ export default function TrainModelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TrainModelPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <TrainModelContent />
+    </Suspense>
   );
 }

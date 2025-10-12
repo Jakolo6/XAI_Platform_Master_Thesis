@@ -10,7 +10,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, ArrowRight, ArrowLeft, Loader2, Star } from 'lucide-react';
 import axios from 'axios';
@@ -26,7 +26,7 @@ interface Question {
   feature_importance: { [key: string]: number };
 }
 
-export default function StudySessionPage() {
+function StudySessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -316,5 +316,13 @@ export default function StudySessionPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudySessionPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <StudySessionContent />
+    </Suspense>
   );
 }
