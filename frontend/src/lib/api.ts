@@ -127,10 +127,10 @@ export const explanationsAPI = {
   
   // Sandbox-specific endpoints
   getSampleInstance: (modelId: string) => 
-    api.get(`/explanations/sample/${modelId}`),
+    api.get(`/sandbox/sample/${modelId}`),
   
   getLocalExplanation: (modelId: string, instanceId: string, method: string) =>
-    api.get(`/explanations/local/${modelId}/${instanceId}`, { params: { method } }),
+    api.get(`/sandbox/local/${modelId}/${instanceId}`, { params: { method } }),
   
   whatIfAnalysis: (modelId: string, instanceId: string, feature: string, newValue: number) =>
     api.post(`/explanations/what-if`, { 
