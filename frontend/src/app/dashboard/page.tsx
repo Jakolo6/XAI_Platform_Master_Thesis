@@ -120,7 +120,7 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Link
               href="/datasets"
               className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
@@ -195,6 +195,24 @@ export default function DashboardPage() {
               </h3>
               <p className="text-sm text-gray-600">
                 Compare explanation quality, view leaderboards, and export results
+              </p>
+            </Link>
+
+            <Link
+              href="/study"
+              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-orange-600" />
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Human Study
+              </h3>
+              <p className="text-sm text-gray-600">
+                Evaluate trust and understanding of AI explanations
               </p>
             </Link>
 
