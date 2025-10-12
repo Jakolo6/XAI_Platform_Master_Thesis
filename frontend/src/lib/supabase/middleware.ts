@@ -45,7 +45,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
+  // Protected routes - TEMPORARILY DISABLED for development
+  // TODO: Re-enable when auth is fully configured
+  /*
   const protectedPaths = ['/dashboard', '/models', '/datasets', '/benchmarks', '/research', '/reports', '/study', '/sandbox']
   const isProtectedPath = protectedPaths.some(path => 
     request.nextUrl.pathname.startsWith(path)
@@ -58,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     url.searchParams.set('redirectTo', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
+  */
 
   // Redirect to dashboard if already logged in and trying to access auth pages
   const authPaths = ['/login', '/register']
