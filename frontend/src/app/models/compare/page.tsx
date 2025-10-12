@@ -9,34 +9,36 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/store/auth';
+import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
 import { Brain, LogOut, ArrowLeft } from 'lucide-react';
 import { formatPercentage, formatDuration, getRankBadge, getModelTypeLabel } from '@/lib/utils';
-import ComparisonChart from '@/components/charts/ComparisonChart';
+import type { User } from '@supabase/supabase-js';
 
 export default function CompareModelsPage() {
   const router = useRouter();
-  const { isAuthenticated, logout, user } = useAuthStore();
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
   const { leaderboard, fetchLeaderboard, isLoading } = useModelsStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    fetchLeaderboard();
-  }, [isAuthenticated, router, fetchLeaderboard]);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        fetchLeaderboard();
+      }
+    });
+  }, [fetchLeaderboard]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/');
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 

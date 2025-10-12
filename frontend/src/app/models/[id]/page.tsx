@@ -13,8 +13,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuthStore } from '@/store/auth';
+import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
+import type { User } from '@supabase/supabase-js';
 import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart } from 'lucide-react';
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
@@ -34,8 +35,9 @@ export default function ModelDetailPage() {
   const router = useRouter();
   const params = useParams();
   const modelId = params.id as string;
+  const supabase = createClient();
   
-  const { isAuthenticated, logout, user } = useAuthStore();
+  const [user, setUser] = useState<User | null>(null);
   const { selectedModel, selectedMetrics, fetchModelById, fetchModelMetrics, isLoading } = useModelsStore();
   
   const [shapExplanation, setShapExplanation] = useState<any>(null);
@@ -57,17 +59,17 @@ export default function ModelDetailPage() {
   const [showQualityMetrics, setShowQualityMetrics] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-    if (modelId) {
-      fetchModelById(modelId);
-      fetchModelMetrics(modelId);
-      // Load existing explanations
-      loadExistingExplanations();
-    }
-  }, [isAuthenticated, modelId, router, fetchModelById, fetchModelMetrics]);
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user && modelId) {
+        fetchModelById(modelId);
+        fetchModelMetrics(modelId);
+        // Load existing explanations
+        loadExistingExplanations();
+      }
+    });
+  }, [modelId, fetchModelById, fetchModelMetrics]);
 
   /**
    * Load existing explanations for the model
@@ -98,8 +100,8 @@ export default function ModelDetailPage() {
    * Handle user logout
    * Clears authentication state and redirects to home page
    */
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push('/');
   };
 
@@ -354,7 +356,7 @@ export default function ModelDetailPage() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null;
   }
 
