@@ -196,7 +196,7 @@ export default function TradeOffScatter({
               name="Pareto Frontier"
               data={paretoFrontier}
               line={{ stroke: '#fbbf24', strokeWidth: 2, strokeDasharray: '5 5' }}
-              shape={() => null}
+              shape={<></>}
             />
           )}
           
