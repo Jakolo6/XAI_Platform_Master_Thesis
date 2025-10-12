@@ -1,187 +1,378 @@
 'use client';
 
-import { useState } from 'react';
-import { DatasetSelector } from '@/components/datasets/DatasetSelector';
-import { Plus, Download, RefreshCw, Info } from 'lucide-react';
-import { datasetsAPI } from '@/lib/api';
-
 export const dynamic = 'force-dynamic';
 
-export default function DatasetsPage() {
-  const [selectedDataset, setSelectedDataset] = useState<string>('');
-  const [processing, setProcessing] = useState(false);
+import { useState, useEffect } from 'react';
+import {
+  Database,
+  Download,
+  CheckCircle,
+  Loader2,
+  BarChart3,
+  AlertCircle,
+  TrendingUp
+} from 'lucide-react';
+import axios from 'axios';
 
-  const handleProcess = async (datasetId: string) => {
-    setProcessing(true);
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+
+interface DatasetStatus {
+  downloaded: boolean;
+  processed: boolean;
+  n_samples?: number;
+  n_features?: number;
+  train_size?: number;
+  val_size?: number;
+  test_size?: number;
+}
+
+interface EDAStats {
+  distributions: Record<string, any>;
+  correlations: Record<string, any>;
+  missing_values: Record<string, number>;
+  target_distribution: {
+    class_0: number;
+    class_1: number;
+  };
+}
+
+export default function HomeCreditDatasetPage() {
+  const [status, setStatus] = useState<DatasetStatus>({
+    downloaded: false,
+    processed: false
+  });
+  const [edaStats, setEdaStats] = useState<EDAStats | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkDatasetStatus();
+  }, []);
+
+  const checkDatasetStatus = async () => {
     try {
-      // Real API call to backend
-      const response = await datasetsAPI.preprocess(datasetId);
+      const response = await axios.get(`${API_BASE}/datasets/home-credit/eda/home-credit-default-risk`);
       
-      if (response.status === 200) {
-        alert(`Dataset processing started for: ${datasetId}\n\nCheck the datasets page for progress.`);
-      }
-    } catch (error: any) {
-      console.error('Failed to process dataset:', error);
-      const errorMsg = error.response?.data?.detail || 'Failed to start processing. Dataset may already be processed or backend is not running.';
-      alert(errorMsg);
-    } finally {
-      setProcessing(false);
+      setStatus({
+        downloaded: true,
+        processed: true,
+        n_samples: response.data.n_samples,
+        n_features: response.data.n_features,
+        train_size: response.data.eda_stats?.train_size,
+        val_size: response.data.eda_stats?.val_size,
+        test_size: response.data.eda_stats?.test_size
+      });
+      
+      setEdaStats(response.data.eda_stats);
+    } catch (error) {
+      console.log('Dataset not ready yet');
     }
   };
 
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    setError(null);
+    
+    try {
+      await axios.post(`${API_BASE}/datasets/home-credit/download`);
+      setStatus(prev => ({ ...prev, downloaded: true }));
+      alert('Dataset downloaded successfully! Now preprocessing...');
+      await handlePreprocess();
+    } catch (error: any) {
+      setError(error.response?.data?.detail || 'Failed to download dataset');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handlePreprocess = async () => {
+    setIsProcessing(true);
+    setError(null);
+    
+    try {
+      const response = await axios.post(`${API_BASE}/datasets/home-credit/preprocess`);
+      
+      setStatus({
+        downloaded: true,
+        processed: true,
+        n_samples: response.data.n_samples,
+        n_features: response.data.n_features,
+        train_size: response.data.train_size,
+        val_size: response.data.val_size,
+        test_size: response.data.test_size
+      });
+      
+      setEdaStats(response.data.eda_stats);
+      
+      alert('Dataset preprocessed successfully!');
+    } catch (error: any) {
+      setError(error.response?.data?.detail || 'Failed to preprocess dataset');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Datasets</h1>
-            <p className="text-gray-600 mt-2">
-              Manage datasets for model training and evaluation
-            </p>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleRefresh}
-              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <RefreshCw className="h-5 w-5 mr-2" />
-              Refresh
-            </button>
-            <button
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Dataset
-            </button>
-          </div>
-        </div>
-
-        {/* Info Banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8 flex items-start">
-          <Info className="h-5 w-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Multi-Dataset Research Platform</p>
-            <p>
-              Select a dataset to view details, or process a new dataset for model training.
-              Datasets are configured in <code className="bg-blue-100 px-1 rounded">config/datasets.yaml</code>
-            </p>
-          </div>
-        </div>
-
-        {/* Dataset Selector */}
-        <div className="mb-8">
-          <DatasetSelector
-            onSelect={setSelectedDataset}
-            selectedId={selectedDataset}
-          />
-        </div>
-
-        {/* Actions Panel */}
-        {selectedDataset && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Actions</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Process Dataset */}
-              <button
-                onClick={() => handleProcess(selectedDataset)}
-                disabled={processing}
-                className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="h-8 w-8 text-blue-600 mb-3" />
-                <span className="font-medium text-gray-900 mb-1">
-                  {processing ? 'Processing...' : 'Process Dataset'}
-                </span>
-                <span className="text-sm text-gray-600 text-center">
-                  Download and preprocess data
-                </span>
-              </button>
-
-              {/* Train Model */}
-              <button
-                onClick={() => window.location.href = `/models/train?dataset=${selectedDataset}`}
-                className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all"
-              >
-                <svg className="h-8 w-8 text-green-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span className="font-medium text-gray-900 mb-1">Train Model</span>
-                <span className="text-sm text-gray-600 text-center">
-                  Start model training
-                </span>
-              </button>
-
-              {/* View Details */}
-              <button
-                onClick={() => window.location.href = `/datasets/${selectedDataset}`}
-                className="flex flex-col items-center p-6 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all"
-              >
-                <Info className="h-8 w-8 text-purple-600 mb-3" />
-                <span className="font-medium text-gray-900 mb-1">View Details</span>
-                <span className="text-sm text-gray-600 text-center">
-                  See dataset information
-                </span>
-              </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Header */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
+              <Database className="h-8 w-8 text-white" />
             </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Home Credit Default Risk Dataset
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Kaggle Competition Dataset for Credit Risk Assessment
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Quick Stats */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Commands</h3>
-              <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
-                <div className="text-gray-600 mb-2"># Process dataset:</div>
-                <div className="text-gray-900">python scripts/process_dataset.py {selectedDataset}</div>
-                
-                <div className="text-gray-600 mt-4 mb-2"># Train model:</div>
-                <div className="text-gray-900">python scripts/train_model_simple.py {selectedDataset} xgboost</div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Data Preparation Checklist */}
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            Data Preparation Steps
+          </h2>
+          
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              {status.downloaded ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
+              <span className={status.downloaded ? 'text-green-900 font-medium' : 'text-gray-600'}>
+                Dataset Downloaded from Kaggle
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {status.processed ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
+              <span className={status.processed ? 'text-green-900 font-medium' : 'text-gray-600'}>
+                Cleaning done (NaN handling, encoding)
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {status.processed ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
+              <span className={status.processed ? 'text-green-900 font-medium' : 'text-gray-600'}>
+                Feature engineering (scaling, one-hot encoding)
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {status.processed ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
+              <span className={status.processed ? 'text-green-900 font-medium' : 'text-gray-600'}>
+                Train/Validation/Test split (70/15/15)
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {status.processed ? (
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              ) : (
+                <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
+              )}
+              <span className={status.processed ? 'text-green-900 font-medium' : 'text-gray-600'}>
+                Stored dataset version in Supabase
+              </span>
+            </div>
+          </div>
+
+          {!status.downloaded && (
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="mt-6 flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Downloading...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5" />
+                  <span>Download Dataset</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {status.downloaded && !status.processed && (
+            <button
+              onClick={handlePreprocess}
+              disabled={isProcessing}
+              className="mt-6 flex items-center space-x-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <BarChart3 className="h-5 w-5" />
+                  <span>Preprocess Dataset</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* Dataset Statistics */}
+        {status.processed && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="text-sm text-gray-600 mb-1">Total Samples</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {status.n_samples?.toLocaleString()}
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="text-sm text-gray-600 mb-1">Features</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {status.n_features}
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="text-sm text-gray-600 mb-1">Train / Val / Test</div>
+              <div className="text-lg font-bold text-gray-900">
+                {status.train_size?.toLocaleString()} / {status.val_size?.toLocaleString()} / {status.test_size?.toLocaleString()}
               </div>
             </div>
           </div>
         )}
 
-        {/* Help Section */}
-        <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Getting Started</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">1. Process a Dataset</h3>
-              <p className="text-sm text-gray-600">
-                Select a dataset and click "Process Dataset" to download and preprocess the data.
-                This will create train/validation/test splits.
-              </p>
-            </div>
+        {/* EDA Visualizations */}
+        {edaStats && (
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+              <TrendingUp className="h-6 w-6 text-indigo-600" />
+              <span>Exploratory Data Analysis</span>
+            </h2>
             
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">2. Train Models</h3>
-              <p className="text-sm text-gray-600">
-                Once processed, train multiple models (XGBoost, LightGBM, Random Forest, etc.)
-                on the dataset to compare performance.
-              </p>
+            {/* Target Distribution */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Target Distribution (Default Risk)
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="text-sm text-green-700 mb-1">No Default (Class 0)</div>
+                  <div className="text-2xl font-bold text-green-900">
+                    {edaStats.target_distribution?.class_0?.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">
+                    {((edaStats.target_distribution?.class_0 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="text-sm text-red-700 mb-1">Default (Class 1)</div>
+                  <div className="text-2xl font-bold text-red-900">
+                    {edaStats.target_distribution?.class_1?.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-red-600 mt-1">
+                    {((edaStats.target_distribution?.class_1 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">3. Generate Explanations</h3>
-              <p className="text-sm text-gray-600">
-                Use SHAP or LIME to generate explanations for your trained models
-                and understand feature importance.
-              </p>
+
+            {/* Feature Distributions */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Key Feature Statistics
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Feature
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Mean
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Std Dev
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Min / Max
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {Object.entries(edaStats.distributions || {}).slice(0, 10).map(([feature, stats]: [string, any]) => (
+                      <tr key={feature} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {feature}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {stats.mean?.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {stats.std?.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {stats.min?.toFixed(2)} / {stats.max?.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            
+
+            {/* Missing Values Summary */}
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">4. Compare Results</h3>
-              <p className="text-sm text-gray-600">
-                View benchmarks to compare model performance across different datasets
-                and identify the best approaches.
-              </p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Missing Values Summary
+              </h3>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-700">
+                  All missing values have been handled during preprocessing:
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                  <li>• Numerical features: Filled with median values</li>
+                  <li>• Categorical features: Filled with mode values</li>
+                  <li>• All features encoded and scaled for model training</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
