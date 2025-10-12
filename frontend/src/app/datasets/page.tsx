@@ -10,9 +10,25 @@ import {
   Loader2,
   BarChart3,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  PieChart as PieChartIcon
 } from 'lucide-react';
 import axios from 'axios';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from 'recharts';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 
@@ -283,29 +299,67 @@ export default function HomeCreditDatasetPage() {
               <span>Exploratory Data Analysis</span>
             </h2>
             
-            {/* Target Distribution */}
+            {/* Target Distribution with Charts */}
             <div className="mb-8">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Target Distribution (Default Risk)
               </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="text-sm text-green-700 mb-1">No Default (Class 0)</div>
-                  <div className="text-2xl font-bold text-green-900">
-                    {edaStats.target_distribution?.class_0?.toLocaleString()}
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Stats Cards */}
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="text-sm text-green-700 mb-1">No Default (Class 0)</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      {edaStats.target_distribution?.class_0?.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {((edaStats.target_distribution?.class_0 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
+                    </div>
                   </div>
-                  <div className="text-xs text-green-600 mt-1">
-                    {((edaStats.target_distribution?.class_0 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="text-sm text-red-700 mb-1">Default (Class 1)</div>
+                    <div className="text-2xl font-bold text-red-900">
+                      {edaStats.target_distribution?.class_1?.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-red-600 mt-1">
+                      {((edaStats.target_distribution?.class_1 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="text-sm text-blue-700 mb-1">Class Imbalance Ratio</div>
+                    <div className="text-2xl font-bold text-blue-900">
+                      {(edaStats.target_distribution?.class_0 / edaStats.target_distribution?.class_1).toFixed(2)}:1
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      Imbalanced dataset - consider SMOTE or class weights
+                    </div>
                   </div>
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="text-sm text-red-700 mb-1">Default (Class 1)</div>
-                  <div className="text-2xl font-bold text-red-900">
-                    {edaStats.target_distribution?.class_1?.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-red-600 mt-1">
-                    {((edaStats.target_distribution?.class_1 / (edaStats.target_distribution?.class_0 + edaStats.target_distribution?.class_1)) * 100).toFixed(1)}%
-                  </div>
+                
+                {/* Pie Chart */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'No Default', value: edaStats.target_distribution?.class_0 || 0, color: '#10b981' },
+                          { name: 'Default', value: edaStats.target_distribution?.class_1 || 0, color: '#ef4444' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        <Cell fill="#10b981" />
+                        <Cell fill="#ef4444" />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
@@ -315,6 +369,31 @@ export default function HomeCreditDatasetPage() {
               <h3 className="text-lg font-semibold text-gray-800 mb-4">
                 Key Feature Statistics
               </h3>
+              
+              {/* Feature Distribution Chart */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Feature Mean Values (Top 10)</h4>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={Object.entries(edaStats.distributions || {}).slice(0, 10).map(([feature, stats]: [string, any]) => ({
+                      feature: feature.length > 20 ? feature.substring(0, 20) + '...' : feature,
+                      mean: stats.mean,
+                      std: stats.std
+                    }))}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="feature" angle={-45} textAnchor="end" height={100} />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="mean" fill="#6366f1" name="Mean" />
+                    <Bar dataKey="std" fill="#8b5cf6" name="Std Dev" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              {/* Feature Statistics Table */}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -330,6 +409,9 @@ export default function HomeCreditDatasetPage() {
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                         Min / Max
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        Range
                       </th>
                     </tr>
                   </thead>
@@ -347,6 +429,9 @@ export default function HomeCreditDatasetPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {stats.min?.toFixed(2)} / {stats.max?.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {(stats.max - stats.min).toFixed(2)}
                         </td>
                       </tr>
                     ))}
