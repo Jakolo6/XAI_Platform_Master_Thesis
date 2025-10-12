@@ -191,20 +191,20 @@ async def get_eda_statistics(dataset_id: str):
                 
                 if result.data and len(result.data) > 0:
                     dataset = result.data[0]
-                
-                return {
-                    "dataset_id": dataset_id,
-                    "eda_stats": dataset.get("statistics", {}),  # EDA stats stored in statistics column
-                    "target_distribution": {
-                        "class_0": dataset.get("non_fraud_count", 0),
-                        "class_1": dataset.get("fraud_count", 0)
-                    },
-                    "n_samples": dataset.get("total_rows", 0),
-                    "n_features": dataset.get("total_columns", 0),
-                    "train_size": dataset.get("train_rows", 0),
-                    "val_size": dataset.get("val_rows", 0),
-                    "test_size": dataset.get("test_rows", 0)
-                }
+                    
+                    return {
+                        "dataset_id": dataset_id,
+                        "eda_stats": dataset.get("statistics", {}),  # EDA stats stored in statistics column
+                        "target_distribution": {
+                            "class_0": dataset.get("non_fraud_count", 0),
+                            "class_1": dataset.get("fraud_count", 0)
+                        },
+                        "n_samples": dataset.get("total_rows", 0),
+                        "n_features": dataset.get("total_columns", 0),
+                        "train_size": dataset.get("train_rows", 0),
+                        "val_size": dataset.get("val_rows", 0),
+                        "test_size": dataset.get("test_rows", 0)
+                    }
         except Exception as db_error:
             logger.warning("Failed to get from Supabase", error=str(db_error))
         
