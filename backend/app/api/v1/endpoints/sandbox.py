@@ -149,9 +149,11 @@ async def submit_interpretability_rating(rating: InterpretabilityRating):
             "created_at": datetime.utcnow().isoformat()
         }
         
-        result = supabase_db.table('explanation_ratings').insert(rating_data).execute()
-        
-        logger.info("Rating saved", rating_id=rating_id)
+        if supabase_db.is_available():
+            result = supabase_db.client.table('explanation_ratings').insert(rating_data).execute()
+            logger.info("Rating saved", rating_id=rating_id)
+        else:
+            logger.warning("Supabase not available, rating not saved")
         
         return RatingResponse(
             rating_id=rating_id,

@@ -30,13 +30,15 @@ async def get_dataset_status():
             logger.info("R2 file check result", files_in_r2=files_in_r2)
         else:
             logger.warning("R2 not configured!")
+            files_in_r2 = False
         
         # Check if processed in Supabase
         processed_in_supabase = False
         try:
-            result = supabase_db.table('datasets').select('id').eq('id', 'home-credit-default-risk').execute()
-            processed_in_supabase = result.data and len(result.data) > 0
-            logger.info("Supabase check result", processed_in_supabase=processed_in_supabase)
+            if supabase_db.is_available():
+                result = supabase_db.client.table('datasets').select('id').eq('id', 'home-credit-default-risk').execute()
+                processed_in_supabase = result.data and len(result.data) > 0
+                logger.info("Supabase check result", processed_in_supabase=processed_in_supabase)
         except Exception as e:
             logger.warning("Supabase check failed", error=str(e))
         
@@ -149,8 +151,11 @@ async def preprocess_home_credit_dataset():
         # Insert or update in Supabase
         logger.info("Saving to Supabase", dataset_id=result["dataset_id"])
         try:
-            response = supabase_db.table('datasets').upsert(dataset_metadata, on_conflict="id").execute()
-            logger.info("Successfully saved to Supabase!", response=response)
+            if supabase_db.is_available():
+                response = supabase_db.client.table('datasets').upsert(dataset_metadata, on_conflict="id").execute()
+                logger.info("Successfully saved to Supabase!", response=response)
+            else:
+                logger.warning("Supabase not available, skipping save")
         except Exception as db_error:
             logger.error("FAILED to save to Supabase!", error=str(db_error), error_type=type(db_error).__name__)
             # Re-raise so we know it failed
@@ -181,10 +186,11 @@ async def get_eda_statistics(dataset_id: str):
         
         # Get from Supabase
         try:
-            result = supabase_db.table('datasets').select('*').eq('id', dataset_id).execute()
-            
-            if result.data and len(result.data) > 0:
-                dataset = result.data[0]
+            if supabase_db.is_available():
+                result = supabase_db.client.table('datasets').select('*').eq('id', dataset_id).execute()
+                
+                if result.data and len(result.data) > 0:
+                    dataset = result.data[0]
                 
                 return {
                     "dataset_id": dataset_id,
