@@ -22,24 +22,35 @@ async def get_dataset_status():
     try:
         # Check if files exist in R2
         files_in_r2 = False
-        if r2_service.is_configured():
+        r2_configured = r2_service.is_configured()
+        logger.info("Checking R2 status", r2_configured=r2_configured)
+        
+        if r2_configured:
             files_in_r2 = r2_service.file_exists("home-credit/raw/application_train.csv")
+            logger.info("R2 file check result", files_in_r2=files_in_r2)
+        else:
+            logger.warning("R2 not configured!")
         
         # Check if processed in Supabase
         processed_in_supabase = False
         try:
             result = supabase_db.table('datasets').select('id').eq('id', 'home-credit-default-risk').execute()
             processed_in_supabase = result.data and len(result.data) > 0
-        except Exception:
-            pass
+            logger.info("Supabase check result", processed_in_supabase=processed_in_supabase)
+        except Exception as e:
+            logger.warning("Supabase check failed", error=str(e))
         
-        return {
+        status_response = {
             "files_in_r2": files_in_r2,
             "processed_in_supabase": processed_in_supabase,
             "needs_download": not files_in_r2,
             "needs_preprocessing": files_in_r2 and not processed_in_supabase,
             "ready": processed_in_supabase
         }
+        
+        logger.info("Status response", status=status_response)
+        return status_response
+        
     except Exception as e:
         logger.error("Failed to check status", error=str(e))
         return {
