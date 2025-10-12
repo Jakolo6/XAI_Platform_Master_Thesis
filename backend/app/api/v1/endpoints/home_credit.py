@@ -53,14 +53,24 @@ async def preprocess_home_credit_dataset():
     try:
         logger.info("API: Preprocessing Home Credit dataset")
         
-        # Check if dataset files exist, download if not
+        # Check if dataset files exist locally or in R2
         from pathlib import Path
+        from app.services.r2_service import r2_service
+        
         data_dir = Path("data/raw/home_credit")
         train_file = data_dir / "application_train.csv"
         
+        # Priority: Local > R2 > Kaggle
         if not train_file.exists():
-            logger.info("Dataset files not found, downloading first...")
-            kaggle_service.download_dataset()
+            logger.info("Dataset files not found locally, checking R2...")
+            
+            # Try to download from R2 first (much faster!)
+            if r2_service.is_configured() and r2_service.file_exists("home-credit/raw/application_train.csv"):
+                logger.info("Dataset found in R2, downloading from there (fast!)")
+                # Files will be downloaded by load_and_preprocess when needed
+            else:
+                logger.info("Dataset not in R2, downloading from Kaggle (first time only)...")
+                kaggle_service.download_dataset()
         
         result = kaggle_service.load_and_preprocess()
         
