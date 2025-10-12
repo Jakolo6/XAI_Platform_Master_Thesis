@@ -90,6 +90,7 @@ export default function TrainModelPage() {
       });
 
       const result = response.data;
+      console.log('Training result:', result); // Debug log
       setTrainingResult(result);
       
       // Show success message and navigate to model detail
@@ -353,7 +354,9 @@ export default function TrainModelPage() {
                   <div className="space-y-3 text-left">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Model ID:</span>
-                      <code className="font-mono text-sm bg-white px-2 py-1 rounded">{trainingResult.model_id}</code>
+                      <code className="font-mono text-sm bg-white px-2 py-1 rounded">
+                        {trainingResult.model_id || trainingResult.id || 'Processing...'}
+                      </code>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Dataset:</span>
@@ -370,7 +373,15 @@ export default function TrainModelPage() {
 
                 <div className="flex gap-4 justify-center">
                   <button
-                    onClick={() => router.push(`/models/${trainingResult.model_id}`)}
+                    onClick={() => {
+                      const modelId = trainingResult.model_id || trainingResult.id;
+                      if (modelId) {
+                        router.push(`/models/${modelId}`);
+                      } else {
+                        alert('Model ID not found. Please check the models page.');
+                        router.push('/models');
+                      }
+                    }}
                     className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     View Model Details
