@@ -42,6 +42,8 @@ export default function Navbar() {
         { href: '/datasets', label: 'Datasets' },
         { href: '/models/train', label: 'Train Model' },
         { href: '/research', label: 'Research' },
+        { href: '/study', label: 'Human Study' },
+        { href: '/reports', label: 'Reports' },
         { href: '/benchmarks', label: 'Benchmarks' },
       ]
     : [
