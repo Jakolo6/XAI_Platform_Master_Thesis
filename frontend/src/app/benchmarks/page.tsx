@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Award, Clock } from 'lucide-react';
 import { benchmarksAPI } from '@/lib/api';

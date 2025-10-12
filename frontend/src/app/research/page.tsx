@@ -11,12 +11,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
-import { Brain, TrendingUp, Target, Sparkles, Filter, Download, Loader2 } from 'lucide-react';
-import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
+import { Brain, Download, Filter, TrendingUp, Sparkles, Target, Loader2 } from 'lucide-react';
 import TradeOffScatter from '@/components/charts/TradeOffScatter';
+import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
 import { researchAPI, reportsAPI } from '@/lib/api';
 
-// Demo data for prototype
+export const dynamic = 'force-dynamic';
 const DEMO_DATA = {
   models: [
     {

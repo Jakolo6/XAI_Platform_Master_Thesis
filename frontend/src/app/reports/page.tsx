@@ -14,6 +14,8 @@ import { useAuthStore } from '@/store/auth';
 import { FileDown, Download, FileText, Database, BarChart3, Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { reportsAPI, researchAPI } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export default function ReportsPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
