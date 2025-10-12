@@ -113,6 +113,8 @@ async def preprocess_home_credit_dataset():
         result = kaggle_service.load_and_preprocess()
         
         # Save metadata to Supabase (matching schema columns)
+        from datetime import datetime
+        
         dataset_metadata = {
             "id": result["dataset_id"],  # Primary key
             "name": "Home Credit Default Risk",
@@ -126,19 +128,25 @@ async def preprocess_home_credit_dataset():
             "train_rows": result["train_size"],
             "val_rows": result["val_size"],
             "test_rows": result["test_size"],
-            "fraud_count": result["target_distribution"]["class_1"],  # Defaults
+            "fraud_count": result["target_distribution"]["class_1"],
             "non_fraud_count": result["target_distribution"]["class_0"],
             "fraud_percentage": (result["target_distribution"]["class_1"] / result["n_samples"]) * 100,
             "statistics": result["eda_stats"],  # Store EDA stats in statistics column
-            "completed_at": "NOW()"
+            "completed_at": datetime.utcnow().isoformat()
         }
         
         # Insert or update in Supabase
+        logger.info("Saving to Supabase", dataset_id=result["dataset_id"])
         try:
-            supabase_db.table('datasets').upsert(dataset_metadata, on_conflict="id").execute()
+            response = supabase_db.table('datasets').upsert(dataset_metadata, on_conflict="id").execute()
+            logger.info("Successfully saved to Supabase!", response=response)
         except Exception as db_error:
-            logger.warning("Failed to save to Supabase", error=str(db_error))
-            # Continue even if Supabase fails
+            logger.error("FAILED to save to Supabase!", error=str(db_error), error_type=type(db_error).__name__)
+            # Re-raise so we know it failed
+            raise HTTPException(
+                status_code=500,
+                detail=f"Preprocessing succeeded but failed to save to Supabase: {str(db_error)}"
+            )
         
         logger.info("Dataset preprocessed and saved")
         
