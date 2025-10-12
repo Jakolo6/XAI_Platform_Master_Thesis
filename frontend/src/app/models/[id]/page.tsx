@@ -772,6 +772,27 @@ export default function ModelDetailPage() {
               )}
             </div>
 
+            {/* Feature Highlight Banner */}
+            {(shapExplanation || limeExplanation) && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <Sparkles className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-1">
+                      ✨ New: Global & Local Explanations
+                    </h3>
+                    <p className="text-xs text-purple-700">
+                      <strong>Global:</strong> Average importance across all predictions • 
+                      <strong> Local:</strong> Explain ONE specific prediction • 
+                      Try entering a sample index below!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Method Switcher */}
             {(shapExplanation || limeExplanation) && (
               <div className="bg-white rounded-lg shadow p-4 space-y-4">

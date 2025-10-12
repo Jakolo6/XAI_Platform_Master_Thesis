@@ -8,7 +8,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Database, BarChart3, Brain, ArrowRight } from 'lucide-react'
+import { Database, BarChart3, Brain, ArrowRight, Sparkles, FileText } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -125,25 +125,34 @@ export default async function DashboardPage() {
               </p>
             </Link>
 
-            <div className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-6 opacity-60">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <Brain className="h-6 w-6 text-gray-400" />
-                </div>
+            <Link
+              href="/research"
+              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group relative overflow-hidden"
+            >
+              <div className="absolute top-2 right-2">
+                <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                  NEW
+                </span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                Generate Explanations
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-purple-600" />
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                XAI Research Lab
               </h3>
-              <p className="text-sm text-gray-500">
-                Coming soon - SHAP and LIME explanations
+              <p className="text-sm text-gray-600">
+                Compare explanation quality, view leaderboards, and export results
               </p>
-            </div>
+            </Link>
           </div>
         </div>
 
         {/* Getting Started Guide */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 text-white">
-          <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
+          <h2 className="text-2xl font-bold mb-4">Complete XAI Workflow</h2>
           <ol className="space-y-3">
             <li className="flex items-start">
               <span className="flex-shrink-0 w-6 h-6 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">
@@ -155,13 +164,25 @@ export default async function DashboardPage() {
               <span className="flex-shrink-0 w-6 h-6 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 2
               </span>
-              <span>Train models using different algorithms (XGBoost, Random Forest, etc.)</span>
+              <span>Train models - SHAP explanations are auto-generated!</span>
             </li>
             <li className="flex items-start">
               <span className="flex-shrink-0 w-6 h-6 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">
                 3
               </span>
-              <span>Compare performance across datasets in the benchmarks section</span>
+              <span>View model details with Global & Local SHAP explanations</span>
+            </li>
+            <li className="flex items-start">
+              <span className="flex-shrink-0 w-6 h-6 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                4
+              </span>
+              <span>Evaluate explanation quality and compare SHAP vs LIME</span>
+            </li>
+            <li className="flex items-start">
+              <span className="flex-shrink-0 w-6 h-6 bg-white text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">
+                5
+              </span>
+              <span>Export results as CSV/JSON for your thesis research</span>
             </li>
           </ol>
         </div>
