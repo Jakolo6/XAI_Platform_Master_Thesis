@@ -12,9 +12,11 @@
 2. **Backend Endpoints** - Kaggle integration ready
 3. **Sandbox Page** - Interactive XAI exploration
 4. **Environment Variables** - Configured on Netlify & Railway
+5. **Railway Redeploy** - Triggered to load new endpoints
 
 ### ⏳ **IN PROGRESS:**
-- Home Credit dataset download/preprocessing (needs Kaggle API acceptance)
+- Railway deployment (wait 2-3 minutes for redeploy)
+- Home Credit dataset download/preprocessing (needs Kaggle competition acceptance)
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE)
