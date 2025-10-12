@@ -15,11 +15,11 @@
 5. **Dataset Download** - Working! Files downloaded successfully
 6. **Route Fix** - Fixed route conflict (specific before generic)
 7. **R2 Storage Integration** - Persistent storage for datasets! 🎉
+8. **Supabase Schema** - Aligned with existing database structure
 
 ### ⏳ **IN PROGRESS:**
-- Railway redeploying with R2 integration (2-3 minutes)
-- First preprocessing will take 10-15 min (download + upload to R2)
-- All subsequent preprocessing will be FAST (2-3 min from R2!)
+- Railway redeploying with full integration (2-3 minutes)
+- Ready to test complete flow: Download → R2 → Process → Supabase
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE)
