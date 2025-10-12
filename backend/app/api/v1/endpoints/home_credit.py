@@ -64,24 +64,30 @@ async def preprocess_home_credit_dataset():
         
         result = kaggle_service.load_and_preprocess()
         
-        # Save metadata to Supabase
+        # Save metadata to Supabase (matching schema columns)
         dataset_metadata = {
-            "dataset_id": result["dataset_id"],
+            "id": result["dataset_id"],  # Primary key
             "name": "Home Credit Default Risk",
+            "description": "Kaggle Home Credit Default Risk Competition Dataset",
             "source": "Kaggle",
-            "n_samples": result["n_samples"],
-            "n_features": result["n_features"],
-            "train_size": result["train_size"],
-            "val_size": result["val_size"],
-            "test_size": result["test_size"],
-            "target_distribution": result["target_distribution"],
-            "status": "processed",
-            "eda_stats": result["eda_stats"]
+            "source_identifier": "home-credit-default-risk",
+            "status": "completed",
+            "file_path": "home-credit/processed",  # R2 path
+            "total_rows": result["n_samples"],
+            "total_columns": result["n_features"],
+            "train_rows": result["train_size"],
+            "val_rows": result["val_size"],
+            "test_rows": result["test_size"],
+            "fraud_count": result["target_distribution"]["class_1"],  # Defaults
+            "non_fraud_count": result["target_distribution"]["class_0"],
+            "fraud_percentage": (result["target_distribution"]["class_1"] / result["n_samples"]) * 100,
+            "statistics": result["eda_stats"],  # Store EDA stats in statistics column
+            "completed_at": "NOW()"
         }
         
         # Insert or update in Supabase
         try:
-            supabase_db.table('datasets').upsert(dataset_metadata).execute()
+            supabase_db.table('datasets').upsert(dataset_metadata, on_conflict="id").execute()
         except Exception as db_error:
             logger.warning("Failed to save to Supabase", error=str(db_error))
             # Continue even if Supabase fails
@@ -108,17 +114,23 @@ async def get_eda_statistics(dataset_id: str):
         
         # Get from Supabase
         try:
-            result = supabase_db.table('datasets').select('*').eq('dataset_id', dataset_id).execute()
+            result = supabase_db.table('datasets').select('*').eq('id', dataset_id).execute()
             
             if result.data and len(result.data) > 0:
                 dataset = result.data[0]
                 
                 return {
                     "dataset_id": dataset_id,
-                    "eda_stats": dataset.get("eda_stats", {}),
-                    "target_distribution": dataset.get("target_distribution", {}),
-                    "n_samples": dataset.get("n_samples", 0),
-                    "n_features": dataset.get("n_features", 0)
+                    "eda_stats": dataset.get("statistics", {}),  # EDA stats stored in statistics column
+                    "target_distribution": {
+                        "class_0": dataset.get("non_fraud_count", 0),
+                        "class_1": dataset.get("fraud_count", 0)
+                    },
+                    "n_samples": dataset.get("total_rows", 0),
+                    "n_features": dataset.get("total_columns", 0),
+                    "train_size": dataset.get("train_rows", 0),
+                    "val_size": dataset.get("val_rows", 0),
+                    "test_size": dataset.get("test_rows", 0)
                 }
         except Exception as db_error:
             logger.warning("Failed to get from Supabase", error=str(db_error))
