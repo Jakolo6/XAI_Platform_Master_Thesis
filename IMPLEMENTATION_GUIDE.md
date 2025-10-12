@@ -22,11 +22,37 @@
 - After redeploy: CORS error will be fixed, preprocessing will work!
 
 ### 📝 **TODO (5 Chunks):**
-1. ✅ Dataset Integration (DONE)
-2. ⏳ Model Training
-3. ⏳ Explainability (SHAP/LIME)
+1. ✅ Dataset Integration (DONE - R2 integrated!)
+2. ✅ Model Training (READY - R2 integrated!)
+3. ✅ Explainability (READY - Auto-SHAP on training!)
 4. ⏳ Interpretability Bridge
 5. ⏳ Experiments & Benchmarking
+
+### 🔄 **COMPLETE PIPELINE (R2 Integrated):**
+
+**1. Dataset Processing** ✅
+- Download from Kaggle → Upload to R2
+- Preprocess data → Save CSV + Parquet
+- Upload to R2: `home-credit/processed/`
+- Save metadata to Supabase
+
+**2. Model Training** ✅
+- Download parquet from R2
+- Train models (XGBoost, Random Forest, etc.)
+- Upload model to R2: `models/home-credit-default-risk/*.pkl`
+- Save metrics to Supabase
+- Auto-generate SHAP explanations
+
+**3. XAI Explanations** ✅
+- SHAP auto-generated during training
+- Saved to Supabase
+- Ready for visualization
+
+**4. Everything Persistent** ✅
+- Datasets in R2 (never re-download!)
+- Models in R2 (reusable!)
+- Metadata in Supabase (queryable!)
+- Fast and scalable!
 
 ---
 
@@ -166,9 +192,15 @@ xai-platform-datasets/
 │   │   ├── bureau.csv
 │   │   └── ... (all Kaggle files)
 │   └── processed/
-│       ├── home_credit_train.csv
+│       ├── home_credit_train.csv (for EDA)
 │       ├── home_credit_val.csv
-│       └── home_credit_test.csv
+│       ├── home_credit_test.csv
+│       ├── train.parquet (for model training)
+│       ├── val.parquet
+│       └── test.parquet
+└── models/
+    └── home-credit-default-risk/
+        └── *.pkl (trained model files)
 ```
 
 **Flow:**
