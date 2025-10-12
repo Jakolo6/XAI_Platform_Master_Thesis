@@ -18,9 +18,10 @@
 8. **Supabase Schema** - Aligned with existing database structure
 9. **Enhanced EDA Visualizations** - Charts, graphs, and insights! 📊
 
-### ⏳ **IN PROGRESS:**
-- Railway redeploying with CORS fix (2-3 minutes)
-- After redeploy: CORS error will be fixed, preprocessing will work!
+### ⏳ **READY TO TEST:**
+- Netlify redeploying with persistence fix (1-2 minutes)
+- After preprocessing once, data persists forever!
+- Refresh page anytime to see your data instantly!
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE - R2 integrated!)
