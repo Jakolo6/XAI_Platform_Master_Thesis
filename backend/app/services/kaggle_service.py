@@ -12,6 +12,8 @@ from typing import Dict, Any, Tuple
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
+from app.services.r2_service import r2_service
+
 logger = structlog.get_logger()
 
 
@@ -55,6 +57,14 @@ class KaggleService:
             
             logger.info("Dataset downloaded successfully")
             
+            # Upload to R2 for persistent storage
+            if r2_service.is_configured():
+                logger.info("Uploading dataset files to R2 for persistent storage")
+                r2_service.upload_directory(self.DATA_DIR, "home-credit/raw")
+                logger.info("Dataset uploaded to R2")
+            else:
+                logger.warning("R2 not configured, files will be ephemeral")
+            
             return {
                 "status": "success",
                 "message": "Home Credit dataset downloaded",
@@ -73,8 +83,16 @@ class KaggleService:
             # Load main training data
             train_path = self.DATA_DIR / "application_train.csv"
             
+            # Try to load from R2 if not available locally
             if not train_path.exists():
-                raise FileNotFoundError(f"application_train.csv not found. Please download dataset first.")
+                logger.info("File not found locally, checking R2...")
+                
+                if r2_service.is_configured() and r2_service.file_exists("home-credit/raw/application_train.csv"):
+                    logger.info("Downloading dataset from R2")
+                    r2_service.download_directory("home-credit/raw", self.DATA_DIR)
+                    logger.info("Dataset downloaded from R2")
+                else:
+                    raise FileNotFoundError(f"application_train.csv not found. Please download dataset first.")
             
             df = pd.read_csv(train_path)
             
@@ -144,6 +162,12 @@ class KaggleService:
                        train_size=len(X_train),
                        val_size=len(X_val),
                        test_size=len(X_test))
+            
+            # Upload processed files to R2 for persistent storage
+            if r2_service.is_configured():
+                logger.info("Uploading processed files to R2")
+                r2_service.upload_directory(self.PROCESSED_DIR, "home-credit/processed")
+                logger.info("Processed files uploaded to R2")
             
             # Generate EDA statistics
             eda_stats = self._generate_eda_stats(df, target)
