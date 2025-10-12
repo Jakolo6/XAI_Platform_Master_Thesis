@@ -5,20 +5,62 @@
  * Main dashboard after login - protected route
  */
 
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client';
+
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Database, BarChart3, Brain, ArrowRight, Sparkles, FileText, Users, Download } from 'lucide-react'
+import { Database, BarChart3, Brain, ArrowRight, Sparkles, FileText, Users, Download, Loader2 } from 'lucide-react'
+import { modelsAPI } from '@/lib/api'
 
-export default async function DashboardPage() {
-  const supabase = await createClient()
+export default function DashboardPage() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [user, setUser] = useState<any>(null)
+  const [stats, setStats] = useState({
+    totalModels: 0,
+    completedModels: 0,
+    trainingModels: 0
+  })
+  const [isLoading, setIsLoading] = useState(true)
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  useEffect(() => {
+    checkAuth()
+    fetchStats()
+  }, [])
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      router.push('/login')
+    } else {
+      setUser(user)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const response = await modelsAPI.getAll()
+      const models = response.data || []
+      setStats({
+        totalModels: models.length,
+        completedModels: models.filter((m: any) => m.status === 'completed').length,
+        trainingModels: models.filter((m: any) => m.status === 'training').length
+      })
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (!user) {
-    redirect('/login')
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+      </div>
+    )
   }
 
   return (
@@ -39,38 +81,46 @@ export default async function DashboardPage() {
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Database className="h-6 w-6 text-blue-600" />
+                <Brain className="h-6 w-6 text-blue-600" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">3</span>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              ) : (
+                <span className="text-2xl font-bold text-gray-900">{stats.totalModels}</span>
+              )}
             </div>
-            <h3 className="text-sm font-medium text-gray-600">Available Datasets</h3>
+            <h3 className="text-sm font-medium text-gray-600">Your Trained Models</h3>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <Brain className="h-6 w-6 text-green-600" />
+                <BarChart3 className="h-6 w-6 text-green-600" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">6</span>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              ) : (
+                <span className="text-2xl font-bold text-gray-900">{stats.completedModels}</span>
+              )}
             </div>
-            <h3 className="text-sm font-medium text-gray-600">Model Types</h3>
+            <h3 className="text-sm font-medium text-gray-600">Completed Models</h3>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BarChart3 className="h-6 w-6 text-purple-600" />
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Database className="h-6 w-6 text-orange-600" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">2</span>
+              <span className="text-2xl font-bold text-gray-900">3</span>
             </div>
-            <h3 className="text-sm font-medium text-gray-600">XAI Methods</h3>
+            <h3 className="text-sm font-medium text-gray-600">Available Datasets</h3>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link
               href="/datasets"
               className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
@@ -145,24 +195,6 @@ export default async function DashboardPage() {
               </h3>
               <p className="text-sm text-gray-600">
                 Compare explanation quality, view leaderboards, and export results
-              </p>
-            </Link>
-
-            <Link
-              href="/study"
-              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-orange-600" />
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-orange-600 transition-colors" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Human Study
-              </h3>
-              <p className="text-sm text-gray-600">
-                Evaluate trust and understanding of AI explanations
               </p>
             </Link>
 

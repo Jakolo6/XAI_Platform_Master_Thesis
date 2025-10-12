@@ -136,8 +136,11 @@ export default function ModelDetailPage() {
             const parsedResult = JSON.parse(result.data.result);
             log('Parsed result:', parsedResult);
             setShapExplanation(parsedResult);
+            setShapExplanationId(explanationId); // Store explanation ID
             setSelectedMethod('shap');
             setIsGeneratingExplanation(false);
+            // Reload to get fresh data
+            await loadExistingExplanations();
           } else if (result.data.status === 'failed') {
             clearInterval(pollInterval);
             setExplanationError('Explanation generation failed');
@@ -328,8 +331,12 @@ export default function ModelDetailPage() {
             // Parse and save LIME result
             const parsedResult = JSON.parse(result.data.result);
             setLimeExplanation(parsedResult);
+            setLimeExplanationId(explanationId); // Store explanation ID
             setSelectedMethod('lime');
             setIsGeneratingLime(false);
+            
+            // Reload to get fresh data
+            await loadExistingExplanations();
             
             // Show success
             setTimeout(() => {
