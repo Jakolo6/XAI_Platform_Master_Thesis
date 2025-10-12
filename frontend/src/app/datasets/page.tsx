@@ -70,19 +70,28 @@ export default function HomeCreditDatasetPage() {
     try {
       const response = await axios.get(`${API_BASE}/datasets/home-credit/eda/home-credit-default-risk`);
       
-      setStatus({
-        downloaded: true,
-        processed: true,
-        n_samples: response.data.n_samples,
-        n_features: response.data.n_features,
-        train_size: response.data.eda_stats?.train_size,
-        val_size: response.data.eda_stats?.val_size,
-        test_size: response.data.eda_stats?.test_size
-      });
-      
-      setEdaStats(response.data.eda_stats);
+      if (response.data) {
+        setStatus({
+          downloaded: true,
+          processed: true,
+          n_samples: response.data.n_samples,
+          n_features: response.data.n_features,
+          train_size: response.data.train_size,
+          val_size: response.data.val_size,
+          test_size: response.data.test_size
+        });
+        
+        setEdaStats({
+          distributions: response.data.eda_stats?.distributions || {},
+          correlations: response.data.eda_stats?.correlations || {},
+          missing_values: response.data.eda_stats?.missing_values || {},
+          target_distribution: response.data.target_distribution || { class_0: 0, class_1: 0 }
+        });
+        
+        console.log('Dataset loaded from Supabase!', response.data);
+      }
     } catch (error) {
-      console.log('Dataset not ready yet');
+      console.log('Dataset not ready yet - needs preprocessing');
     }
   };
 
@@ -107,21 +116,15 @@ export default function HomeCreditDatasetPage() {
     setError(null);
     
     try {
-      const response = await axios.post(`${API_BASE}/datasets/home-credit/preprocess`);
+      await axios.post(`${API_BASE}/datasets/home-credit/preprocess`);
       
-      setStatus({
-        downloaded: true,
-        processed: true,
-        n_samples: response.data.n_samples,
-        n_features: response.data.n_features,
-        train_size: response.data.train_size,
-        val_size: response.data.val_size,
-        test_size: response.data.test_size
-      });
+      // Wait a moment for Supabase to save
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      setEdaStats(response.data.eda_stats);
+      // Refresh data from Supabase
+      await checkDatasetStatus();
       
-      alert('Dataset preprocessed successfully!');
+      alert('Dataset preprocessed and saved to Supabase! You can refresh anytime to see the data.');
     } catch (error: any) {
       setError(error.response?.data?.detail || 'Failed to preprocess dataset');
     } finally {
