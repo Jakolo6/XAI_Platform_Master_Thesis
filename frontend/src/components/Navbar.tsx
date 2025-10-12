@@ -42,6 +42,7 @@ export default function Navbar() {
         { href: '/datasets', label: 'Datasets' },
         { href: '/models/train', label: 'Train Model' },
         { href: '/sandbox', label: 'Explainable AI' },
+        { href: '/interpretation', label: 'Interpretation Layer' },
         { href: '/study', label: 'Human Study' },
         { href: '/reports', label: 'Reports' },
       ]
