@@ -8,6 +8,53 @@
 
 datasets:
   # ============================================================
+  # HOME CREDIT DEFAULT RISK (PRIMARY DATASET)
+  # ============================================================
+  - id: home-credit-default-risk
+    name: home-credit-default-risk
+    display_name: "Home Credit Default Risk"
+    description: "Kaggle Home Credit Default Risk Competition Dataset. Predict loan default risk with 300K+ samples and 120+ features. Real-world credit risk assessment data."
+    
+    # Source
+    source: kaggle
+    kaggle_competition: home-credit-default-risk
+    
+    # Configuration
+    target_column: TARGET
+    positive_class: 1
+    
+    # Split ratios
+    split_ratios:
+      train: 0.7
+      val: 0.15
+      test: 0.15
+    
+    # Preprocessing pipeline
+    preprocessing_pipeline:
+      - handle_missing_values
+      - encode_categorical
+      - scale_numerical
+      - remove_low_variance
+    
+    # Feature engineering
+    feature_engineering:
+      - credit_history_features
+      - income_ratios
+      - time_features
+    
+    # Metadata
+    license: "Kaggle Competition License"
+    citation: "Home Credit Default Risk, Kaggle 2018"
+    tags:
+      - credit-risk
+      - financial
+      - classification
+      - imbalanced
+      - real-world
+    
+    is_active: true
+  
+  # ============================================================
   # IEEE-CIS FRAUD DETECTION
   # ============================================================
   - id: ieee-cis-fraud
@@ -51,7 +98,7 @@ datasets:
       - imbalanced
       - large-scale
     
-    is_active: true
+    is_active: false  # Disabled - not yet implemented
   
   # ============================================================
   # GIVE ME SOME CREDIT
@@ -90,7 +137,7 @@ datasets:
       - classification
       - imbalanced
     
-    is_active: true
+    is_active: false  # Disabled - not yet implemented
   
   # ============================================================
   # GERMAN CREDIT RISK
