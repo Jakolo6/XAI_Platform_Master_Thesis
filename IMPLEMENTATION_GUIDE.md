@@ -14,10 +14,12 @@
 4. **Environment Variables** - Configured on Netlify & Railway
 5. **Dataset Download** - Working! Files downloaded successfully
 6. **Route Fix** - Fixed route conflict (specific before generic)
+7. **R2 Storage Integration** - Persistent storage for datasets! 🎉
 
 ### ⏳ **IN PROGRESS:**
-- Railway redeploying with auto-download fix (2-3 minutes)
-- After redeploy: Click "Preprocess Dataset" and it will auto-download + process
+- Railway redeploying with R2 integration (2-3 minutes)
+- First preprocessing will take 10-15 min (download + upload to R2)
+- All subsequent preprocessing will be FAST (2-3 min from R2!)
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE)
@@ -141,6 +143,37 @@ frontend/src/app/experiments/page.tsx
 - `DATABASE_URL` - Supabase PostgreSQL connection string
 - `KAGGLE_USERNAME` - Your Kaggle username
 - `KAGGLE_KEY` - Your Kaggle API key
+- `R2_ACCOUNT_ID` - Cloudflare R2 account ID
+- `R2_ACCESS_KEY_ID` - R2 access key
+- `R2_SECRET_ACCESS_KEY` - R2 secret key
+- `R2_BUCKET_NAME` - xai-platform-datasets
+
+### **R2 Storage Architecture** ✅ IMPLEMENTED
+
+**Why R2:**
+- Persistent storage (files don't disappear!)
+- Fast access (no repeated Kaggle downloads)
+- Scalable across Railway containers
+- Production-ready
+
+**Storage Structure:**
+```
+xai-platform-datasets/
+├── home-credit/
+│   ├── raw/
+│   │   ├── application_train.csv
+│   │   ├── application_test.csv
+│   │   ├── bureau.csv
+│   │   └── ... (all Kaggle files)
+│   └── processed/
+│       ├── home_credit_train.csv
+│       ├── home_credit_val.csv
+│       └── home_credit_test.csv
+```
+
+**Flow:**
+1. **First time:** Kaggle → Local → R2 → Process → R2 (10-15 min)
+2. **Subsequent:** R2 → Local → Process (2-3 min) ⚡️
 
 ### **Database Schema**
 
