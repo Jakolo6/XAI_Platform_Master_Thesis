@@ -112,10 +112,12 @@ class R2Service:
             logger.info("Uploading directory to R2", local_dir=str(local_dir), r2_prefix=r2_prefix)
             
             uploaded_count = 0
-            for file_path in local_dir.glob("*.csv"):
-                r2_key = f"{r2_prefix}/{file_path.name}"
-                if self.upload_file(file_path, r2_key):
-                    uploaded_count += 1
+            # Upload both CSV and Parquet files
+            for file_path in local_dir.glob("*"):
+                if file_path.is_file() and file_path.suffix in ['.csv', '.parquet']:
+                    r2_key = f"{r2_prefix}/{file_path.name}"
+                    if self.upload_file(file_path, r2_key):
+                        uploaded_count += 1
             
             logger.info("Directory upload complete", uploaded_count=uploaded_count)
             return uploaded_count > 0

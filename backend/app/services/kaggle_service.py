@@ -145,18 +145,21 @@ class KaggleService:
                 X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
             )
             
-            # 7. Save processed data
+            # 7. Save processed data (both CSV and Parquet for compatibility)
             train_df = X_train.copy()
             train_df['TARGET'] = y_train
             train_df.to_csv(self.PROCESSED_DIR / "home_credit_train.csv", index=False)
+            train_df.to_parquet(self.PROCESSED_DIR / "train.parquet", index=False)  # For model training
             
             val_df = X_val.copy()
             val_df['TARGET'] = y_val
             val_df.to_csv(self.PROCESSED_DIR / "home_credit_val.csv", index=False)
+            val_df.to_parquet(self.PROCESSED_DIR / "val.parquet", index=False)  # For model training
             
             test_df = X_test.copy()
             test_df['TARGET'] = y_test
             test_df.to_csv(self.PROCESSED_DIR / "home_credit_test.csv", index=False)
+            test_df.to_parquet(self.PROCESSED_DIR / "test.parquet", index=False)  # For model training
             
             logger.info("Preprocessing complete",
                        train_size=len(X_train),

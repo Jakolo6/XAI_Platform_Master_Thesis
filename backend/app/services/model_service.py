@@ -21,7 +21,7 @@ except ImportError:
     XGBOOST_AVAILABLE = False
 
 from app.core.config import settings
-from app.utils.r2_storage import r2_storage_client
+from app.services.r2_service import r2_service
 from app.utils.supabase_client import supabase_db
 
 logger = structlog.get_logger()
@@ -76,9 +76,9 @@ class ModelTrainingService:
                 val_path = temp_dir / "val.parquet"
                 test_path = temp_dir / "test.parquet"
                 
-                r2_storage_client.download_file(f"{file_path}/train.parquet", str(train_path))
-                r2_storage_client.download_file(f"{file_path}/val.parquet", str(val_path))
-                r2_storage_client.download_file(f"{file_path}/test.parquet", str(test_path))
+                r2_service.download_file(f"{file_path}/train.parquet", train_path)
+                r2_service.download_file(f"{file_path}/val.parquet", val_path)
+                r2_service.download_file(f"{file_path}/test.parquet", test_path)
                 
                 # 4. Load data
                 logger.info("Loading training data", dataset_id=dataset_id)
@@ -138,8 +138,8 @@ class ModelTrainingService:
                 # 10. Upload model to R2
                 logger.info("Uploading model to R2", model_id=model_id)
                 r2_model_path = f"models/{dataset_id}/{model_id}.pkl"
-                r2_storage_client.upload_file(
-                    str(model_path),
+                r2_service.upload_file(
+                    model_path,
                     r2_model_path
                 )
                 
