@@ -124,6 +124,31 @@ export const explanationsAPI = {
     api.post(`/explanations/${explanationId}/evaluate-quality`),
   
   getQuality: (evalId: string) => api.get(`/explanations/quality/${evalId}`),
+  
+  // Sandbox-specific endpoints
+  getSampleInstance: (modelId: string) => 
+    api.get(`/explanations/sample/${modelId}`),
+  
+  getLocalExplanation: (modelId: string, instanceId: string, method: string) =>
+    api.get(`/explanations/local/${modelId}/${instanceId}`, { params: { method } }),
+  
+  whatIfAnalysis: (modelId: string, instanceId: string, feature: string, newValue: number) =>
+    api.post(`/explanations/what-if`, { 
+      model_id: modelId, 
+      instance_id: instanceId, 
+      feature, 
+      new_value: newValue 
+    }),
+  
+  submitInterpretabilityRating: (data: {
+    model_id: string;
+    instance_id: string;
+    clarity: number;
+    trustworthiness: number;
+    actionability: number;
+    shap_method: string;
+    lime_method: string;
+  }) => api.post('/explanations/rating', data),
 };
 
 export const benchmarksAPI = {
