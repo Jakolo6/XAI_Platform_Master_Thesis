@@ -1,12 +1,12 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DatasetSelector } from '@/components/datasets/DatasetSelector';
 import { Play, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { modelsAPI } from '@/lib/api';
-
-export const dynamic = 'force-dynamic';
 
 export default function TrainModelPage() {
   const searchParams = useSearchParams();
