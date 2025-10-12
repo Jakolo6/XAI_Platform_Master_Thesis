@@ -2,12 +2,12 @@
 [build]
   base = "frontend"
   command = "npm run build"
-  publish = ".next"
+  publish = ".next"  # Netlify Next.js plugin handles this automatically
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"  # Updated to Node 20 for Next.js 15 compatibility
 
-# Next.js specific configuration
+# Next.js specific configuration - handles SSR and routing automatically
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
