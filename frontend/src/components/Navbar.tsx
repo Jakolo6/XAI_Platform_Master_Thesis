@@ -44,7 +44,6 @@ export default function Navbar() {
         { href: '/sandbox', label: 'Explainable AI' },
         { href: '/study', label: 'Human Study' },
         { href: '/reports', label: 'Reports' },
-        { href: '/benchmarks', label: 'Benchmarks' },
       ]
     : [
         { href: '/', label: 'Home' },

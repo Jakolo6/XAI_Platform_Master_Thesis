@@ -86,9 +86,12 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div 
+            onClick={() => router.push('/benchmarks')}
+            className="bg-white rounded-lg shadow-sm border p-6 cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] group"
+          >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
                 <Brain className="h-6 w-6 text-blue-600" />
               </div>
               {isLoading ? (
@@ -97,7 +100,8 @@ export default function DashboardPage() {
                 <span className="text-2xl font-bold text-gray-900">{stats.totalModels}</span>
               )}
             </div>
-            <h3 className="text-sm font-medium text-gray-600">Your Trained Models</h3>
+            <h3 className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">Your Trained Models</h3>
+            <p className="text-xs text-gray-500 mt-1">Click to view benchmarks</p>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -187,23 +191,6 @@ export default function DashboardPage() {
               </p>
             </Link>
 
-            <Link
-              href="/benchmarks"
-              className="bg-white rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow group"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-purple-600" />
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                View Benchmarks
-              </h3>
-              <p className="text-sm text-gray-600">
-                Compare model performance across different datasets
-              </p>
-            </Link>
 
             <Link
               href="/research"
