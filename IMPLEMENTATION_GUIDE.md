@@ -16,8 +16,8 @@
 6. **Route Fix** - Fixed route conflict (specific before generic)
 
 ### ⏳ **IN PROGRESS:**
-- Railway redeploying with route fix (2-3 minutes)
-- Dataset preprocessing (will work after redeploy)
+- Railway redeploying with auto-download fix (2-3 minutes)
+- After redeploy: Click "Preprocess Dataset" and it will auto-download + process
 
 ### 📝 **TODO (5 Chunks):**
 1. ✅ Dataset Integration (DONE)
