@@ -3,13 +3,15 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
-import { BarChart3, TrendingUp, Award, Clock } from 'lucide-react';
+import Link from 'next/link';
+import { BarChart3, TrendingUp, Award, Clock, ExternalLink } from 'lucide-react';
 import { benchmarksAPI } from '@/lib/api';
 
 interface BenchmarkData {
   dataset_id: string;
   dataset_name: string;
   models: Record<string, {
+    model_id: string;
     auc_roc: number;
     f1_score: number;
     training_time_seconds: number;
@@ -188,15 +190,21 @@ export default function BenchmarksPage() {
                         return (
                           <tr 
                             key={modelType}
-                            className={isBest ? 'bg-yellow-50' : 'hover:bg-gray-50'}
+                            className={`${isBest ? 'bg-yellow-50' : 'hover:bg-gray-50'} cursor-pointer transition-colors`}
+                            onClick={() => metrics.model_id && (window.location.href = `/models/${metrics.model_id}`)}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <span className="text-sm font-medium text-gray-900">
-                                  {modelType}
-                                </span>
-                                {isBest && (
-                                  <Award className="h-4 w-4 text-yellow-600 ml-2" />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {modelType}
+                                  </span>
+                                  {isBest && (
+                                    <Award className="h-4 w-4 text-yellow-600 ml-2" />
+                                  )}
+                                </div>
+                                {metrics.model_id && (
+                                  <ExternalLink className="h-4 w-4 text-gray-400" />
                                 )}
                               </div>
                             </td>

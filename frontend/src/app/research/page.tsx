@@ -334,7 +334,11 @@ export default function ResearchPage() {
                 {filteredData
                   .sort((a: any, b: any) => b.quality_score - a.quality_score)
                   .map((model: any, index: number) => (
-                    <tr key={model.model_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr 
+                      key={model.model_id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                      onClick={() => model.model_id && (window.location.href = `/models/${model.model_id}`)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                           index === 0 ? 'bg-yellow-100 text-yellow-800' :
