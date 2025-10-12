@@ -14,6 +14,8 @@ import Link from 'next/link'
 import { Database, BarChart3, Brain, ArrowRight, Sparkles, FileText, Users, Download, Loader2 } from 'lucide-react'
 import { modelsAPI } from '@/lib/api'
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const router = useRouter()
   const supabase = createClient()

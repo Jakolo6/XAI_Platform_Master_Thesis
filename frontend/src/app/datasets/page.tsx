@@ -5,6 +5,8 @@ import { DatasetSelector } from '@/components/datasets/DatasetSelector';
 import { Plus, Download, RefreshCw, Info } from 'lucide-react';
 import { datasetsAPI } from '@/lib/api';
 
+export const dynamic = 'force-dynamic';
+
 export default function DatasetsPage() {
   const [selectedDataset, setSelectedDataset] = useState<string>('');
   const [processing, setProcessing] = useState(false);
