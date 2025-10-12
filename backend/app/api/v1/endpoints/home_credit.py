@@ -37,7 +37,7 @@ async def get_dataset_status():
         try:
             if supabase_db.is_available():
                 result = supabase_db.client.table('datasets').select('id').eq('id', 'home-credit-default-risk').execute()
-                processed_in_supabase = result.data and len(result.data) > 0
+                processed_in_supabase = bool(result.data and len(result.data) > 0)
                 logger.info("Supabase check result", processed_in_supabase=processed_in_supabase)
         except Exception as e:
             logger.warning("Supabase check failed", error=str(e))
