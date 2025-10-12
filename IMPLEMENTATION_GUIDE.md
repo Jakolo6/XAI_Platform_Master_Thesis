@@ -175,6 +175,12 @@ xai-platform-datasets/
 1. **First time:** Kaggle → Local → R2 → Process → R2 (10-15 min)
 2. **Subsequent:** R2 → Local → Process (2-3 min) ⚡️
 
+**Smart Download Logic:**
+- Checks local files first (ephemeral)
+- Then checks R2 (persistent)
+- Only downloads from Kaggle if not in R2
+- Since you already downloaded once, it will use R2!
+
 ### **Database Schema**
 
 **Tables:**
