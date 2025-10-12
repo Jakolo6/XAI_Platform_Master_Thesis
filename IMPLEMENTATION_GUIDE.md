@@ -16,6 +16,7 @@
 6. **Route Fix** - Fixed route conflict (specific before generic)
 7. **R2 Storage Integration** - Persistent storage for datasets! 🎉
 8. **Supabase Schema** - Aligned with existing database structure
+9. **Enhanced EDA Visualizations** - Charts, graphs, and insights! 📊
 
 ### ⏳ **IN PROGRESS:**
 - Railway redeploying with CORS fix (2-3 minutes)
