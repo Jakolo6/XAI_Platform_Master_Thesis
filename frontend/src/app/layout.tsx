@@ -12,7 +12,8 @@ export const metadata: Metadata = {
   description: "Explainable AI in Financial Services - Benchmarking Platform",
 };
 
-export const dynamic = 'force-dynamic';
+// Removed force-dynamic for better Netlify compatibility
+// export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
 export default function RootLayout({
