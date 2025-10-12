@@ -43,6 +43,7 @@ async def download_home_credit_dataset(background_tasks: BackgroundTasks):
 async def preprocess_home_credit_dataset():
     """
     Preprocess Home Credit dataset:
+    - Check if files exist, download if not
     - Handle missing values
     - Encode categorical variables
     - Scale features
@@ -51,6 +52,15 @@ async def preprocess_home_credit_dataset():
     """
     try:
         logger.info("API: Preprocessing Home Credit dataset")
+        
+        # Check if dataset files exist, download if not
+        from pathlib import Path
+        data_dir = Path("data/raw/home_credit")
+        train_file = data_dir / "application_train.csv"
+        
+        if not train_file.exists():
+            logger.info("Dataset files not found, downloading first...")
+            kaggle_service.download_dataset()
         
         result = kaggle_service.load_and_preprocess()
         
