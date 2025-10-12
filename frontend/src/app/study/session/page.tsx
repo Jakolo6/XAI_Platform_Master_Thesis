@@ -54,26 +54,14 @@ export default function StudySessionPage() {
   const loadQuestions = async () => {
     setIsLoading(true);
     try {
-      // Generate mock questions for now (in production, fetch from backend)
-      const mockQuestions: Question[] = Array.from({ length: 5 }, (_, i) => ({
-        question_id: i + 1,
-        model_prediction: i % 2 === 0 ? 'Not Fraud' : 'Fraud',
-        true_label: i % 2 === 0 ? 'Not Fraud' : 'Fraud',
-        confidence: 0.85 + Math.random() * 0.1,
-        explanation_method: i % 2 === 0 ? 'SHAP' : 'LIME',
-        feature_importance: {
-          'TransactionAmt': -0.45 + Math.random() * 0.9,
-          'card_type': -0.3 + Math.random() * 0.6,
-          'merchant_category': -0.2 + Math.random() * 0.4,
-          'transaction_time': -0.15 + Math.random() * 0.3,
-          'user_history': 0.1 + Math.random() * 0.2,
-        }
-      }));
-      
-      setQuestions(mockQuestions);
-    } catch (error) {
+      // Fetch real questions from backend
+      const response = await axios.get(`${API_BASE}/humanstudy/questions`);
+      setQuestions(response.data.questions || response.data);
+    } catch (error: any) {
       console.error('Failed to load questions:', error);
-      alert('Failed to load study questions');
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to load study questions';
+      alert(`Backend Error: ${errorMsg}\n\nCould not load study questions. Please ensure:\n1. Backend is running\n2. Models are trained\n3. Explanations are generated\n\nEndpoint: GET /api/v1/humanstudy/questions`);
+      setQuestions([]);
     } finally {
       setIsLoading(false);
     }

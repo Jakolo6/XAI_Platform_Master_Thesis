@@ -16,72 +16,6 @@ import QualityMetricsRadar from '@/components/charts/QualityMetricsRadar';
 import { researchAPI, reportsAPI } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
-const DEMO_DATA = {
-  models: [
-    {
-      model_id: 'xgboost_1',
-      model_name: 'XGBoost IEEE-CIS',
-      model_type: 'xgboost',
-      dataset: 'IEEE-CIS Fraud',
-      auc_roc: 0.9024,
-      quality_score: 0.82,
-      method: 'SHAP' as const,
-      faithfulness: 0.85,
-      robustness: 0.78,
-      complexity: 0.83
-    },
-    {
-      model_id: 'xgboost_2',
-      model_name: 'XGBoost IEEE-CIS',
-      model_type: 'xgboost',
-      dataset: 'IEEE-CIS Fraud',
-      auc_roc: 0.9024,
-      quality_score: 0.75,
-      method: 'LIME' as const,
-      faithfulness: 0.72,
-      robustness: 0.70,
-      complexity: 0.82
-    },
-    {
-      model_id: 'rf_1',
-      model_name: 'Random Forest IEEE-CIS',
-      model_type: 'random_forest',
-      dataset: 'IEEE-CIS Fraud',
-      auc_roc: 0.8676,
-      quality_score: 0.79,
-      method: 'SHAP' as const,
-      faithfulness: 0.81,
-      robustness: 0.75,
-      complexity: 0.80
-    },
-    {
-      model_id: 'rf_2',
-      model_name: 'Random Forest IEEE-CIS',
-      model_type: 'random_forest',
-      dataset: 'IEEE-CIS Fraud',
-      auc_roc: 0.8676,
-      quality_score: 0.71,
-      method: 'LIME' as const,
-      faithfulness: 0.68,
-      robustness: 0.67,
-      complexity: 0.78
-    }
-  ],
-  shapMetrics: {
-    faithfulness: 0.85,
-    robustness: 0.78,
-    complexity: 0.83,
-    stability: 0.80,
-    sparsity: 0.75
-  },
-  limeMetrics: {
-    faithfulness: 0.72,
-    robustness: 0.70,
-    complexity: 0.82,
-    stability: 0.68,
-    sparsity: 0.85
-  }
-};
 
 export default function ResearchPage() {
   const router = useRouter();
@@ -90,6 +24,7 @@ export default function ResearchPage() {
   const [showParetoFrontier, setShowParetoFrontier] = useState(true);
   const [leaderboardData, setLeaderboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchLeaderboardData();
@@ -97,13 +32,14 @@ export default function ResearchPage() {
 
   const fetchLeaderboardData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await researchAPI.getLeaderboard();
       setLeaderboardData(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch leaderboard:', error);
-      // Fallback to demo data
-      setLeaderboardData(DEMO_DATA);
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to load research data';
+      setError(`Backend Error: ${errorMsg}. Please ensure the backend is running and models are trained.`);
     } finally {
       setIsLoading(false);
     }
@@ -128,16 +64,6 @@ export default function ResearchPage() {
 
   // Auth is handled by middleware, no need for client-side check
 
-  // Use real data or fallback to demo
-  const modelsData = leaderboardData?.models || DEMO_DATA.models;
-  
-  // Filter data based on selections
-  const filteredData = modelsData.filter((model: any) => {
-    if (selectedDataset !== 'all' && model.dataset_id !== selectedDataset) return false;
-    if (selectedMethod !== 'all' && model.method !== selectedMethod) return false;
-    return true;
-  });
-  
   // Show loading state
   if (isLoading) {
     return (
@@ -149,6 +75,66 @@ export default function ResearchPage() {
       </div>
     );
   }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="text-red-600 mb-4">
+              <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Failed to Load Research Data</h3>
+            <p className="text-red-700 mb-4">{error}</p>
+            <button
+              onClick={fetchLeaderboardData}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No data available
+  if (!leaderboardData || !leaderboardData.models || leaderboardData.models.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md text-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <div className="text-yellow-600 mb-4">
+              <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-yellow-900 mb-2">No Research Data Available</h3>
+            <p className="text-yellow-700 mb-4">
+              No models have been trained yet. Train some models with explanations to see research data.
+            </p>
+            <button
+              onClick={() => router.push('/models/train')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Train a Model
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter data based on selections
+  const modelsData = leaderboardData.models;
+  const filteredData = modelsData.filter((model: any) => {
+    if (selectedDataset !== 'all' && model.dataset_id !== selectedDataset) return false;
+    if (selectedMethod !== 'all' && model.method !== selectedMethod) return false;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -286,12 +272,20 @@ export default function ResearchPage() {
         </div>
 
         {/* Radar Comparison */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
-          <QualityMetricsRadar 
-            shapMetrics={DEMO_DATA.shapMetrics}
-            limeMetrics={DEMO_DATA.limeMetrics}
-          />
-        </div>
+        {leaderboardData.shapMetrics && leaderboardData.limeMetrics ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+            <QualityMetricsRadar 
+              shapMetrics={leaderboardData.shapMetrics}
+              limeMetrics={leaderboardData.limeMetrics}
+            />
+          </div>
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
+            <p className="text-yellow-800 text-center">
+              Quality metrics comparison not available. Generate explanations for trained models to see this chart.
+            </p>
+          </div>
+        )}
 
         {/* Global Leaderboard */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

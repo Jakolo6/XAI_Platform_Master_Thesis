@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Database, BarChart3, Brain, ArrowRight, Sparkles, FileText, Users, Download, Loader2 } from 'lucide-react'
-import { modelsAPI } from '@/lib/api'
+import { modelsAPI, datasetsAPI } from '@/lib/api'
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     totalModels: 0,
     completedModels: 0,
-    trainingModels: 0
+    trainingModels: 0,
+    availableDatasets: 0
   })
   const [isLoading, setIsLoading] = useState(true)
 
@@ -43,12 +44,17 @@ export default function DashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await modelsAPI.getAll()
-      const models = response.data || []
+      const [modelsResponse, datasetsResponse] = await Promise.all([
+        modelsAPI.getAll(),
+        datasetsAPI.getAll()
+      ])
+      const models = modelsResponse.data || []
+      const datasets = datasetsResponse.data || []
       setStats({
         totalModels: models.length,
         completedModels: models.filter((m: any) => m.status === 'completed').length,
-        trainingModels: models.filter((m: any) => m.status === 'training').length
+        trainingModels: models.filter((m: any) => m.status === 'training').length,
+        availableDatasets: datasets.length
       })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
@@ -113,7 +119,11 @@ export default function DashboardPage() {
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <Database className="h-6 w-6 text-orange-600" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">3</span>
+              {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              ) : (
+                <span className="text-2xl font-bold text-gray-900">{stats.availableDatasets}</span>
+              )}
             </div>
             <h3 className="text-sm font-medium text-gray-600">Available Datasets</h3>
           </div>

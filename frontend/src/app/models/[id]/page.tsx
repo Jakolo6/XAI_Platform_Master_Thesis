@@ -185,27 +185,9 @@ export default function ModelDetailPage() {
       setQualityMetrics(metrics);
     } catch (error: any) {
       log('Failed to load quality metrics:', error);
-      // Fallback to demo metrics if API fails
-      const demoMetrics = {
-        faithfulness: {
-          score: selectedMethod === 'shap' ? 0.85 : 0.78,
-          monotonicity: selectedMethod === 'shap' ? 0.85 : 0.78,
-          selectivity: selectedMethod === 'shap' ? 0.85 : 0.78,
-        },
-        robustness: {
-          score: selectedMethod === 'shap' ? 0.92 : 0.81,
-          stability: selectedMethod === 'shap' ? 0.92 : 0.81,
-          stability_std: selectedMethod === 'shap' ? 0.05 : 0.08,
-        },
-        complexity: {
-          score: selectedMethod === 'shap' ? 0.70 : 0.65,
-          sparsity: selectedMethod === 'shap' ? 0.27 : 0.32,
-          gini_coefficient: selectedMethod === 'shap' ? 0.73 : 0.68,
-          effective_features: selectedMethod === 'shap' ? 15 : 18,
-        },
-        overall_quality: selectedMethod === 'shap' ? 0.85 : 0.78,
-      };
-      setQualityMetrics(demoMetrics);
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to load quality metrics';
+      alert(`Backend Error: ${errorMsg}\n\nQuality metrics could not be loaded. Please ensure the backend is running.`);
+      setQualityMetrics(null);
     } finally {
       setIsLoadingQuality(false);
     }
@@ -1067,11 +1049,9 @@ export default function ModelDetailPage() {
                       <QualityMetrics metrics={qualityMetrics} method={selectedMethod} />
                     ) : (
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                        <p className="text-blue-800 mb-4">
+                        <p className="text-sm text-gray-600 mb-4">
                           Quality metrics provide insights into the reliability and interpretability of explanations.
-                        </p>
-                        <p className="text-sm text-blue-600">
-                          Note: Quality metrics are computed using demo data for this prototype.
+                          These are computed from real backend evaluation.
                         </p>
                       </div>
                     )}
