@@ -152,3 +152,4 @@ async def redoc_redirect():
     """Redirect to ReDoc documentation."""
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url=f"{settings.API_V1_PREFIX}/redoc")
+# Force redeploy - Sun Oct 12 19:38:44 CEST 2025
