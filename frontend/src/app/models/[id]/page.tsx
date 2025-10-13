@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
 import type { User } from '@supabase/supabase-js';
-import { Brain, LogOut, ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart } from 'lucide-react';
+import { ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart } from 'lucide-react';
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
@@ -96,14 +96,6 @@ export default function ModelDetailPage() {
     }
   };
 
-  /**
-   * Handle user logout
-   * Clears authentication state and redirects to home page
-   */
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
 
   /**
    * Generate SHAP explanation for the current model
@@ -362,43 +354,6 @@ export default function ModelDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-8">
-              <Link href="/dashboard" className="flex items-center space-x-2">
-                <Brain className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold">XAI Finance</span>
-              </Link>
-              <div className="hidden md:flex space-x-4">
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/models"
-                  className="text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Models
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-900 p-2 rounded-md"
-                title="Logout"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
