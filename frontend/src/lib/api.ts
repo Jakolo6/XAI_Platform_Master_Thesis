@@ -118,6 +118,8 @@ export const explanationsAPI = {
   
   getByModel: (modelId: string) => api.get(`/explanations/model/${modelId}`),
   
+  getGlobalExplanations: (modelId: string) => api.get(`/explanations/model/${modelId}/global`),
+  
   compare: (modelId: string) => api.get(`/explanations/compare/${modelId}`),
   
   evaluateQuality: (explanationId: string) => 

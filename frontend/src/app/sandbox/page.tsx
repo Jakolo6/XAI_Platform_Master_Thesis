@@ -148,35 +148,52 @@ export default function ExplainableAI() {
     if (!selectedModel) return;
     
     try {
-      // Load global explanations from the model
-      const response = await explanationsAPI.getByModel(selectedModel.model_id);
-      const explanations = response.data;
+      // Load global explanations using the new endpoint
+      const response = await explanationsAPI.getGlobalExplanations(selectedModel.model_id);
+      const { shap, lime, has_shap, has_lime } = response.data;
       
-      // Find SHAP and LIME global explanations
-      const shapExp = explanations.find((e: any) => e.method === 'shap' && e.status === 'completed');
-      const limeExp = explanations.find((e: any) => e.method === 'lime' && e.status === 'completed');
-      
-      if (!shapExp || !limeExp) {
+      if (!has_shap && !has_lime) {
         setError('Global explanations not found. Please generate explanations for this model first.');
         return;
       }
       
-      // Transform to the expected format
-      setShapExplanation({
-        method: 'shap',
-        features: shapExp.explanation_data?.features || [],
-        prediction_proba: 0,
-        base_value: shapExp.explanation_data?.base_value
-      });
+      // Load SHAP if available
+      if (has_shap && shap) {
+        const shapData = {
+          method: 'shap' as const,
+          features: Object.entries(shap.feature_importance || {}).map(([name, value]) => ({
+            feature: name,
+            contribution: value as number,
+            value: value as number,
+            importance: Math.abs(value as number)
+          })),
+          prediction_proba: 0,
+          base_value: 0
+        };
+        setShapExplanation(shapData);
+      }
       
-      setLimeExplanation({
-        method: 'lime',
-        features: limeExp.explanation_data?.features || [],
-        prediction_proba: 0
-      });
+      // Load LIME if available
+      if (has_lime && lime) {
+        const limeData = {
+          method: 'lime' as const,
+          features: Object.entries(lime.feature_importance || {}).map(([name, value]) => ({
+            feature: name,
+            contribution: value as number,
+            value: value as number,
+            importance: Math.abs(value as number)
+          })),
+          prediction_proba: 0
+        };
+        setLimeExplanation(limeData);
+      }
       
-      // Generate global interpretation
-      generateGlobalInterpretation(shapExp, limeExp);
+      // Show info if only one method is available
+      if (has_shap && !has_lime) {
+        setError('Only SHAP explanation available. Generate LIME to compare both methods.');
+      } else if (has_lime && !has_shap) {
+        setError('Only LIME explanation available. Generate SHAP to compare both methods.');
+      }
     } catch (error) {
       console.error('Failed to load global explanations:', error);
       setError('Failed to load global explanations. Please generate them first from the model detail page.');
