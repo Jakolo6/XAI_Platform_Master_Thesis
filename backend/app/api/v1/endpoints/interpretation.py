@@ -231,11 +231,23 @@ async def get_model_shap_data(
         )
         
         if not shap_explanation:
+            # Provide helpful error message
+            logger.warning("No SHAP explanation found", 
+                          model_id=model_id, 
+                          base_model_id=base_model_id,
+                          explanations_found=len(explanations))
+            
             raise HTTPException(
                 status_code=404,
-                detail="No SHAP explanation found for this model. Please generate one first."
+                detail={
+                    "error": "No SHAP explanation found for this model",
+                    "model_id": base_model_id,
+                    "help": "This model doesn't have a SHAP explanation yet. Please train a new model (SHAP is auto-generated) or select a different model.",
+                    "available_explanations": len(explanations)
+                }
             )
         
+        logger.info("SHAP explanation found", model_id=base_model_id)
         return shap_explanation
         
     except HTTPException:

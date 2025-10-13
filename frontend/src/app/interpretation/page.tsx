@@ -111,7 +111,16 @@ export default function InterpretationLayerPage() {
       setShapData(transformedData);
     } catch (err: any) {
       console.error('Failed to load SHAP data:', err);
-      setError(err.response?.data?.detail || 'Failed to load SHAP data. Please generate SHAP explanation first.');
+      
+      // Handle detailed error response
+      const errorDetail = err.response?.data?.detail;
+      if (typeof errorDetail === 'object' && errorDetail.help) {
+        setError(errorDetail.help);
+      } else if (typeof errorDetail === 'string') {
+        setError(errorDetail);
+      } else {
+        setError('Failed to load SHAP data. This model may not have SHAP explanations generated yet. Please train a new model or select a different one.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -165,7 +174,7 @@ export default function InterpretationLayerPage() {
   };
 
   const submitFeedback = async (interpretationMode: string) => {
-    if (clarity === 0 || trustworthiness === 0 || fairness === 0) {
+    if (!clarity || !trustworthiness || !fairness) {
       alert('Please rate all dimensions');
       return;
     }
