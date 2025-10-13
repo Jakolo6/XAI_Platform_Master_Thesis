@@ -125,16 +125,25 @@ class SupabaseClient:
             return None
         
         try:
-            # Try to find by id field first (which may have _metrics suffix)
-            # The model_id parameter from the URL doesn't have _metrics suffix
-            # So we need to search for records where id starts with model_id
+            # The database has 'id' field with _metrics suffix
+            # But URLs may use either format:
+            # - german-credit_xgboost_8d10e541 (without suffix)
+            # - german-credit_xgboost_8d10e541_metrics (with suffix)
+            
             result = self.client.table('models').select('*').execute()
             
             if result.data:
+                # Remove _metrics suffix if present for comparison
+                search_id = model_id.replace('_metrics', '')
+                
                 # Filter in Python to find matching model
                 for model in result.data:
-                    # Check if id matches exactly or if id starts with model_id
-                    if model.get('id') == model_id or model.get('id', '').startswith(model_id):
+                    model_db_id = model.get('id', '')
+                    # Remove _metrics suffix from DB id for comparison
+                    model_db_id_clean = model_db_id.replace('_metrics', '')
+                    
+                    # Match if the clean IDs are the same
+                    if model_db_id_clean == search_id or model_db_id == model_id:
                         return model
             
             return None
