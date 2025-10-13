@@ -98,7 +98,13 @@ export const useModelsStore = create<ModelsState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await modelsAPI.getById(id);
-      set({ selectedModel: response.data, isLoading: false });
+      // Backend returns model with metrics merged in
+      const modelData = response.data;
+      set({ 
+        selectedModel: modelData,
+        selectedMetrics: modelData, // Metrics are already in the model data
+        isLoading: false 
+      });
     } catch (error: any) {
       set({
         error: error.response?.data?.detail || 'Failed to fetch model',
@@ -108,16 +114,9 @@ export const useModelsStore = create<ModelsState>((set) => ({
   },
 
   fetchModelMetrics: async (id: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await modelsAPI.getMetrics(id);
-      set({ selectedMetrics: response.data, isLoading: false });
-    } catch (error: any) {
-      set({
-        error: error.response?.data?.detail || 'Failed to fetch metrics',
-        isLoading: false,
-      });
-    }
+    // Metrics are already fetched with the model, so this is a no-op
+    // Kept for backwards compatibility
+    return Promise.resolve();
   },
 
   fetchLeaderboard: async () => {
