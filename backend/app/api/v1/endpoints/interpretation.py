@@ -55,8 +55,11 @@ async def generate_interpretation(
         Interpretation text and metadata
     """
     try:
+        # Strip _metrics suffix if present
+        base_model_id = request.model_id.replace('_metrics', '')
+        
         # Get model context
-        model = supabase_db.get_model(request.model_id)
+        model = supabase_db.get_model(base_model_id)
         if not model:
             raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
         
@@ -103,7 +106,7 @@ async def compare_interpretations(
     Generate both LLM and rule-based interpretations for comparison.
     
     Args:
-        model_id: Model identifier
+        model_id: Model identifier (with or without _metrics suffix)
         shap_data: SHAP explanation data
         current_user: Authenticated user
         
@@ -111,8 +114,11 @@ async def compare_interpretations(
         Both interpretations side-by-side
     """
     try:
+        # Strip _metrics suffix if present
+        base_model_id = model_id.replace('_metrics', '')
+        
         # Get model context
-        model = supabase_db.get_model(model_id)
+        model = supabase_db.get_model(base_model_id)
         if not model:
             raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
         
@@ -203,15 +209,20 @@ async def get_model_shap_data(
     Get SHAP explanation data for a model.
     
     Args:
-        model_id: Model identifier
+        model_id: Model identifier (with or without _metrics suffix)
         current_user: Authenticated user
         
     Returns:
         SHAP explanation data
     """
     try:
+        # Strip _metrics suffix if present (models table has it, explanations don't)
+        base_model_id = model_id.replace('_metrics', '')
+        
+        logger.info("Fetching SHAP data", model_id=model_id, base_model_id=base_model_id)
+        
         # Get SHAP explanations for this model
-        explanations = supabase_db.list_explanations(model_id=model_id)
+        explanations = supabase_db.list_explanations(model_id=base_model_id)
         
         # Find SHAP global explanation
         shap_explanation = next(
