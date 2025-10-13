@@ -120,12 +120,13 @@ class SupabaseClient:
             return None
     
     def get_model(self, model_id: str) -> Optional[Dict]:
-        """Get model by ID."""
+        """Get model by model_id."""
         if not self.is_available():
             return None
         
         try:
-            result = self.client.table('models').select('*').eq('id', model_id).execute()
+            # Search by model_id field, not id field
+            result = self.client.table('models').select('*').eq('model_id', model_id).execute()
             return result.data[0] if result.data else None
         except Exception as e:
             logger.error("Failed to get model", model_id=model_id, error=str(e))
@@ -174,7 +175,7 @@ class SupabaseClient:
             return None
     
     def get_model_metrics(self, model_id: str) -> Optional[Dict]:
-        """Get model metrics by model ID."""
+        """Get model metrics by model_id."""
         if not self.is_available():
             return None
         
