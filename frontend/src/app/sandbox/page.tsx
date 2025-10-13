@@ -104,12 +104,17 @@ export default function ExplainableAI() {
     setIsLoading(true);
     setError(null);
     try {
-      // Load a sample prediction instance
-      const response = await explanationsAPI.getSampleInstance(selectedModel.model_id);
-      setSelectedInstance(response.data);
-      
-      // Load explanations for this instance
-      await loadExplanations(response.data.instance_id);
+      if (viewMode === 'local') {
+        // Load a sample prediction instance for local view
+        const response = await explanationsAPI.getSampleInstance(selectedModel.model_id);
+        setSelectedInstance(response.data);
+        
+        // Load local explanations for this instance
+        await loadExplanations(response.data.instance_id);
+      } else {
+        // Load global explanations for the model
+        await loadGlobalExplanations();
+      }
     } catch (error: any) {
       console.error('Failed to load sample:', error);
       setError('Failed to load sample instance. Please try another model.');
@@ -122,7 +127,7 @@ export default function ExplainableAI() {
     if (!selectedModel) return;
     
     try {
-      // Load both SHAP and LIME explanations
+      // Load both SHAP and LIME local explanations
       const [shapResponse, limeResponse] = await Promise.all([
         explanationsAPI.getLocalExplanation(selectedModel.model_id, instanceId, 'shap'),
         explanationsAPI.getLocalExplanation(selectedModel.model_id, instanceId, 'lime')
@@ -139,8 +144,47 @@ export default function ExplainableAI() {
     }
   };
 
+  const loadGlobalExplanations = async () => {
+    if (!selectedModel) return;
+    
+    try {
+      // Load global explanations from the model
+      const response = await explanationsAPI.getByModel(selectedModel.model_id);
+      const explanations = response.data;
+      
+      // Find SHAP and LIME global explanations
+      const shapExp = explanations.find((e: any) => e.method === 'shap' && e.status === 'completed');
+      const limeExp = explanations.find((e: any) => e.method === 'lime' && e.status === 'completed');
+      
+      if (!shapExp || !limeExp) {
+        setError('Global explanations not found. Please generate explanations for this model first.');
+        return;
+      }
+      
+      // Transform to the expected format
+      setShapExplanation({
+        method: 'shap',
+        features: shapExp.explanation_data?.features || [],
+        prediction_proba: 0,
+        base_value: shapExp.explanation_data?.base_value
+      });
+      
+      setLimeExplanation({
+        method: 'lime',
+        features: limeExp.explanation_data?.features || [],
+        prediction_proba: 0
+      });
+      
+      // Generate global interpretation
+      generateGlobalInterpretation(shapExp, limeExp);
+    } catch (error) {
+      console.error('Failed to load global explanations:', error);
+      setError('Failed to load global explanations. Please generate them first from the model detail page.');
+    }
+  };
+
   const generateInterpretation = (shap: ExplanationData, lime: ExplanationData) => {
-    // Generate human-readable interpretation
+    // Generate human-readable interpretation for local view
     const topShapFeatures = shap.features.slice(0, 3);
     const topLimeFeatures = lime.features.slice(0, 3);
     
@@ -169,6 +213,38 @@ export default function ExplainableAI() {
         text += `- ${d.feature}: SHAP emphasizes ${d.shap > 0 ? 'positive' : 'negative'} impact, LIME shows ${d.lime > 0 ? 'positive' : 'negative'} impact\n`;
       });
     }
+    
+    setInterpretation(text);
+  };
+
+  const generateGlobalInterpretation = (shapExp: any, limeExp: any) => {
+    // Generate human-readable interpretation for global view
+    const shapFeatures = shapExp.explanation_data?.features || [];
+    const limeFeatures = limeExp.explanation_data?.features || [];
+    
+    const topShapFeatures = shapFeatures.slice(0, 5);
+    const topLimeFeatures = limeFeatures.slice(0, 5);
+    
+    let text = `**Global Feature Importance Analysis**\n\n`;
+    text += `This shows which features are most important for the model's predictions across the entire dataset.\n\n`;
+    
+    text += `**Most Important Features (SHAP):**\n`;
+    topShapFeatures.forEach((f: any, idx: number) => {
+      text += `${idx + 1}. **${f.feature}**: Average importance of ${Math.abs(f.importance || f.contribution).toFixed(3)}\n`;
+    });
+    
+    text += `\n**Most Important Features (LIME):**\n`;
+    topLimeFeatures.forEach((f: any, idx: number) => {
+      text += `${idx + 1}. **${f.feature}**: Average importance of ${Math.abs(f.importance || f.contribution).toFixed(3)}\n`;
+    });
+    
+    // Check for disagreements in feature ranking
+    const topShapNames = topShapFeatures.map((f: any) => f.feature);
+    const topLimeNames = topLimeFeatures.map((f: any) => f.feature);
+    const commonFeatures = topShapNames.filter((name: string) => topLimeNames.includes(name));
+    
+    text += `\n**Method Agreement:**\n`;
+    text += `Both methods agree on ${commonFeatures.length} out of top 5 features: ${commonFeatures.join(', ') || 'None'}\n`;
     
     setInterpretation(text);
   };
@@ -256,7 +332,13 @@ export default function ExplainableAI() {
             {/* Global vs Local Toggle */}
             <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('local')}
+                onClick={() => {
+                  setViewMode('local');
+                  setSelectedInstance(null);
+                  setShapExplanation(null);
+                  setLimeExplanation(null);
+                  setInterpretation('');
+                }}
                 className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
                   viewMode === 'local'
                     ? 'bg-white text-indigo-600 shadow-sm'
@@ -267,7 +349,13 @@ export default function ExplainableAI() {
                 <span>Local View</span>
               </button>
               <button
-                onClick={() => setViewMode('global')}
+                onClick={() => {
+                  setViewMode('global');
+                  setSelectedInstance(null);
+                  setShapExplanation(null);
+                  setLimeExplanation(null);
+                  setInterpretation('');
+                }}
                 className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
                   viewMode === 'global'
                     ? 'bg-white text-indigo-600 shadow-sm'
@@ -346,11 +434,17 @@ export default function ExplainableAI() {
               className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>{isLoading ? 'Loading...' : 'Load Sample Prediction'}</span>
+              <span>
+                {isLoading 
+                  ? 'Loading...' 
+                  : viewMode === 'local' 
+                    ? 'Load Sample Prediction' 
+                    : 'Load Global Explanations'}
+              </span>
             </button>
           )}
           
-          {selectedInstance && (
+          {viewMode === 'local' && selectedInstance && (
             <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
               <p className="text-sm font-medium text-indigo-900 mb-2">
                 Target Prediction: <span className="font-bold">{selectedInstance.model_output}</span>
@@ -363,6 +457,14 @@ export default function ExplainableAI() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          
+          {viewMode === 'global' && shapExplanation && (
+            <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm font-medium text-purple-900">
+                Showing global feature importance across the entire dataset
+              </p>
             </div>
           )}
         </div>
