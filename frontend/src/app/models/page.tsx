@@ -16,15 +16,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import { formatPercentage, formatDuration, getRankBadge, getModelTypeLabel, getModelTypeColor } from '@/lib/utils';
 import type { User } from '@supabase/supabase-js';
+import axios from 'axios';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://xaiplatformmasterthesis-production.up.railway.app/api/v1';
 
 export default function ModelsPage() {
   const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const { leaderboard, fetchLeaderboard, isLoading } = useModelsStore();
+  const [deletingModel, setDeletingModel] = useState<string | null>(null);
 
   useEffect(() => {
     // Get current user
@@ -35,6 +39,29 @@ export default function ModelsPage() {
       }
     });
   }, [fetchLeaderboard]);
+
+  const handleDeleteModel = async (modelId: string, modelName: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to delete "${modelName}"?\n\nThis will permanently delete:\n- Model metadata\n- All metrics\n- All explanations (SHAP, LIME)\n\nThis action cannot be undone.`)) {
+      return;
+    }
+    
+    setDeletingModel(modelId);
+    
+    try {
+      await axios.delete(`${API_BASE_URL}/models/${modelId}`);
+      alert('Model deleted successfully!');
+      // Refresh the list
+      fetchLeaderboard();
+    } catch (error: any) {
+      console.error('Failed to delete model:', error);
+      alert(`Failed to delete model: ${error.response?.data?.detail || error.message}`);
+    } finally {
+      setDeletingModel(null);
+    }
+  };
 
   if (!user) {
     return null;
@@ -71,14 +98,23 @@ export default function ModelsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {leaderboard.map((model) => (
-              <Link
+              <div
                 key={model.model_id}
-                href={`/models/${model.model_id}`}
-                className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
+                className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow relative"
               >
-                <div className="p-6">
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => handleDeleteModel(model.model_id, model.model_name, e)}
+                  disabled={deletingModel === model.model_id}
+                  className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="Delete model"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+
+                <Link href={`/models/${model.model_id}`} className="block p-6">
                   {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-4 pr-8">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="text-2xl">{getRankBadge(model.rank)}</span>
@@ -126,8 +162,8 @@ export default function ModelsPage() {
                       View Details →
                     </span>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         )}

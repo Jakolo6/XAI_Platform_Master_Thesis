@@ -114,7 +114,7 @@ export default function InterpretationLayerPage() {
       
       // Handle detailed error response
       const errorDetail = err.response?.data?.detail;
-      if (typeof errorDetail === 'object' && errorDetail.help) {
+      if (errorDetail && typeof errorDetail === 'object' && errorDetail.help) {
         setError(errorDetail.help);
       } else if (typeof errorDetail === 'string') {
         setError(errorDetail);
