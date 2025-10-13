@@ -78,7 +78,8 @@ export const modelsAPI = {
   
   getMetrics: (id: string) => api.get(`/models/${id}/metrics`),
   
-  getLeaderboard: () => api.get('/benchmarks/leaderboard'),
+  // Use models endpoint which returns enriched data with metrics
+  getLeaderboard: () => api.get('/models/'),
   
   getComparison: (modelIds: string[]) =>
     api.get('/models/leaderboard/comparison', { params: { model_ids: modelIds } }),

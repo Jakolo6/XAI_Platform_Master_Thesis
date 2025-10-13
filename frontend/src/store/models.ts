@@ -138,7 +138,26 @@ export const useModelsStore = create<ModelsState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await modelsAPI.getLeaderboard();
-      set({ leaderboard: response.data, isLoading: false });
+      const models = response.data;
+      
+      // Transform models into leaderboard format
+      const leaderboard: LeaderboardEntry[] = models
+        .filter((m: any) => m.auc_roc !== null && m.auc_roc !== undefined)
+        .map((model: any, index: number) => ({
+          rank: index + 1,
+          model_id: model.id,
+          model_name: model.name || model.id,
+          model_type: model.model_type,
+          auc_roc: model.auc_roc || 0,
+          auc_pr: model.auc_pr || 0,
+          f1_score: model.f1_score || 0,
+          accuracy: model.accuracy || 0,
+          training_time_seconds: model.training_time_seconds || 0,
+        }))
+        .sort((a: LeaderboardEntry, b: LeaderboardEntry) => (b.auc_roc || 0) - (a.auc_roc || 0)); // Sort by AUC-ROC descending
+      
+      console.log('[MODELS STORE] Leaderboard data:', leaderboard);
+      set({ leaderboard, isLoading: false });
     } catch (error: any) {
       console.error('Failed to fetch leaderboard:', error);
       set({
