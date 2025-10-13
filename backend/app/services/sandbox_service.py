@@ -11,10 +11,12 @@ import lime.lime_tabular
 import joblib
 import random
 import structlog
+import tempfile
 from typing import Dict, Any, List, Tuple, Optional
 from pathlib import Path
 
 from app.utils.supabase_client import supabase_db
+from app.utils.r2_storage import r2_storage_client
 
 logger = structlog.get_logger()
 
@@ -24,39 +26,44 @@ class SandboxService:
     
     @staticmethod
     def _load_test_data(dataset_id: str) -> Tuple[pd.DataFrame, pd.Series]:
-        """Load test data for a dataset"""
+        """Load test data for a dataset from R2 storage"""
         try:
-            # Try to load from local processed data
-            test_path = Path(f"data/processed/{dataset_id}_test.csv")
-            
-            if not test_path.exists():
-                # Try alternative path
-                test_path = Path(f"../data/processed/{dataset_id}_test.csv")
-            
-            if not test_path.exists():
-                raise FileNotFoundError(f"Test data not found for dataset {dataset_id}")
-            
-            logger.info("Loading test data", dataset_id=dataset_id, path=str(test_path))
-            df = pd.read_csv(test_path)
-            
-            # Separate features and target
-            target_col = 'isFraud' if 'isFraud' in df.columns else 'target'
-            if target_col not in df.columns:
-                # Try to find target column
-                possible_targets = ['label', 'class', 'y']
-                for col in possible_targets:
-                    if col in df.columns:
-                        target_col = col
-                        break
-            
-            X_test = df.drop(columns=[target_col])
-            y_test = df[target_col]
-            
-            logger.info("Test data loaded", 
-                       n_samples=len(X_test), 
-                       n_features=len(X_test.columns))
-            
-            return X_test, y_test
+            # Download from R2 storage
+            with tempfile.TemporaryDirectory() as temp_dir:
+                test_path = Path(temp_dir) / "test.parquet"
+                r2_path = f"datasets/{dataset_id}/processed/test.parquet"
+                
+                logger.info("Downloading test data from R2", 
+                           dataset_id=dataset_id,
+                           r2_path=r2_path)
+                
+                if not r2_storage_client.download_file(r2_path, str(test_path)):
+                    raise FileNotFoundError(f"Test data not found for model {dataset_id}. Please ensure dataset is processed.")
+                
+                # Load parquet file
+                df = pd.read_parquet(test_path)
+                
+                # Separate features and target
+                target_col = 'isFraud' if 'isFraud' in df.columns else 'target'
+                if target_col not in df.columns:
+                    # Try to find target column
+                    possible_targets = ['label', 'class', 'y', 'TARGET']
+                    for col in possible_targets:
+                        if col in df.columns:
+                            target_col = col
+                            break
+                
+                if target_col not in df.columns:
+                    raise ValueError(f"Could not find target column in test data. Columns: {df.columns.tolist()}")
+                
+                X_test = df.drop(columns=[target_col])
+                y_test = df[target_col]
+                
+                logger.info("Test data loaded", 
+                           n_samples=len(X_test), 
+                           n_features=len(X_test.columns))
+                
+                return X_test, y_test
             
         except Exception as e:
             logger.error("Failed to load test data", 
@@ -65,23 +72,24 @@ class SandboxService:
             raise
     
     @staticmethod
-    def _load_model(model_id: str) -> Any:
-        """Load trained model from storage"""
+    def _load_model(model_id: str, model_path_r2: str) -> Any:
+        """Load trained model from R2 storage"""
         try:
-            # Try local path first
-            model_path = Path(f"models/{model_id}.pkl")
-            
-            if not model_path.exists():
-                # Try alternative path
-                model_path = Path(f"../models/{model_id}.pkl")
-            
-            if not model_path.exists():
-                raise FileNotFoundError(f"Model file not found: {model_id}")
-            
-            logger.info("Loading model", model_id=model_id, path=str(model_path))
-            model = joblib.load(model_path)
-            
-            return model
+            # Download from R2 storage
+            with tempfile.TemporaryDirectory() as temp_dir:
+                model_path = Path(temp_dir) / f"{model_id}.pkl"
+                
+                logger.info("Downloading model from R2", 
+                           model_id=model_id,
+                           r2_path=model_path_r2)
+                
+                if not r2_storage_client.download_file(model_path_r2, str(model_path)):
+                    raise FileNotFoundError(f"Model file not found: {model_id}")
+                
+                logger.info("Loading model", model_id=model_id)
+                model = joblib.load(model_path)
+                
+                return model
             
         except Exception as e:
             logger.error("Failed to load model", model_id=model_id, error=str(e))
@@ -103,6 +111,7 @@ class SandboxService:
             
             model_data = result.data[0]
             dataset_id = model_data['dataset_id']
+            model_path = model_data['model_path']
             
             logger.info("Getting sample instance", 
                        model_id=model_id, 
@@ -117,7 +126,7 @@ class SandboxService:
             true_label = y_test.iloc[random_idx]
             
             # Load trained model
-            loaded_model = SandboxService._load_model(model_id)
+            loaded_model = SandboxService._load_model(model_id, model_path)
             
             # Get prediction
             prediction_proba = loaded_model.predict_proba([sample.values])[0][1]
@@ -182,6 +191,7 @@ class SandboxService:
             
             model_data = result.data[0]
             dataset_id = model_data['dataset_id']
+            model_path = model_data['model_path']
             
             logger.info("Generating SHAP explanation", 
                        model_id=model_id, 
@@ -195,7 +205,7 @@ class SandboxService:
             sample = X_test.iloc[sample_idx]
             
             # Load trained model
-            loaded_model = SandboxService._load_model(model_id)
+            loaded_model = SandboxService._load_model(model_id, model_path)
             
             # Get prediction
             prediction_proba = loaded_model.predict_proba([sample.values])[0][1]
@@ -276,6 +286,7 @@ class SandboxService:
             
             model_data = result.data[0]
             dataset_id = model_data['dataset_id']
+            model_path = model_data['model_path']
             
             logger.info("Generating LIME explanation", 
                        model_id=model_id, 
@@ -289,7 +300,7 @@ class SandboxService:
             sample = X_test.iloc[sample_idx]
             
             # Load trained model
-            loaded_model = SandboxService._load_model(model_id)
+            loaded_model = SandboxService._load_model(model_id, model_path)
             
             # Get prediction
             prediction_proba = loaded_model.predict_proba([sample.values])[0][1]
