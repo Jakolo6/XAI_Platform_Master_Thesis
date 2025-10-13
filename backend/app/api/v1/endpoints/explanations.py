@@ -139,6 +139,44 @@ async def get_model_explanations(
         return []
 
 
+@router.get("/model/{model_id}/global")
+async def get_global_explanations(
+    model_id: str,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Get global explanations (SHAP and LIME) for a model.
+    Returns both methods if available for comparison.
+    """
+    try:
+        # Get all explanations for this model
+        all_explanations = supabase_db.list_explanations(model_id=model_id)
+        
+        # Filter for global explanations only
+        global_explanations = [
+            exp for exp in all_explanations 
+            if exp.get('explanation_type') == 'global' and exp.get('status') == 'completed'
+        ]
+        
+        # Organize by method
+        shap_explanation = next((exp for exp in global_explanations if exp.get('method') == 'shap'), None)
+        lime_explanation = next((exp for exp in global_explanations if exp.get('method') == 'lime'), None)
+        
+        return {
+            "shap": shap_explanation,
+            "lime": lime_explanation,
+            "has_shap": shap_explanation is not None,
+            "has_lime": lime_explanation is not None,
+            "can_compare": shap_explanation is not None and lime_explanation is not None
+        }
+    
+    except Exception as e:
+        logger.error("Failed to get global explanations",
+                    model_id=model_id,
+                    error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/compare/{model_id}")
 async def compare_explanations(
     model_id: str,
