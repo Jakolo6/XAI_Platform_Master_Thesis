@@ -11,7 +11,7 @@ from app.api.dependencies import get_current_researcher
 from app.services.dataset_service import dataset_service
 from app.utils.supabase_client import supabase_db
 from app.datasets.registry import get_dataset_registry
-from app.utils.r2_storage_client import r2_storage_client
+from app.utils.r2_storage import r2_storage_client
 
 logger = structlog.get_logger()
 router = APIRouter()
