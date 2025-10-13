@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
 import { Brain, LogOut, ArrowLeft } from 'lucide-react';
 import { formatPercentage, formatDuration, getRankBadge, getModelTypeLabel } from '@/lib/utils';
+import ComparisonChart from '@/components/charts/ComparisonChart';
 import type { User } from '@supabase/supabase-js';
 
 export default function CompareModelsPage() {
