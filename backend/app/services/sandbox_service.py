@@ -100,16 +100,15 @@ class SandboxService:
         """Get a random test sample with prediction"""
         
         try:
-            # Get model from database
+            # Get model from database using the get_model method which handles _metrics suffix
             if not supabase_db.is_available():
                 raise ValueError("Supabase not available")
             
-            result = supabase_db.client.table('models').select('*').eq('id', model_id).execute()
+            model_data = supabase_db.get_model(model_id)
             
-            if not result.data or len(result.data) == 0:
+            if not model_data:
                 raise ValueError(f"Model {model_id} not found in database")
             
-            model_data = result.data[0]
             dataset_id = model_data['dataset_id']
             model_path = model_data['model_path']
             
