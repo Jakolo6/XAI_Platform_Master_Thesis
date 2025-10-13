@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useModelsStore } from '@/store/models';
 import type { User } from '@supabase/supabase-js';
-import { ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart } from 'lucide-react';
+import { ArrowLeft, Download, TrendingUp, Target, Zap, Sparkles, FileDown, Settings, BarChart3, PieChart, Info } from 'lucide-react';
 import { formatPercentage, formatMetric, formatDuration, getModelTypeLabel } from '@/lib/utils';
 import MetricsChart from '@/components/charts/MetricsChart';
 import ConfusionMatrixChart from '@/components/charts/ConfusionMatrixChart';
