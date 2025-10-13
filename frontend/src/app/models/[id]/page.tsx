@@ -675,6 +675,48 @@ export default function ModelDetailPage() {
               </div>
             )}
 
+            {/* Info Box for Global Explanations */}
+            {!shapExplanation && !limeExplanation && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 mb-1">Generate Global Explanations</h4>
+                    <p className="text-sm text-blue-800 mb-2">
+                      Global explanations show which features are most important for this model's predictions across the entire dataset.
+                      These are required to use the <strong>Global View</strong> in the Explainable AI sandbox.
+                    </p>
+                    <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                      <li><strong>SHAP:</strong> Computes Shapley values - takes ~1-2 minutes for 100 samples</li>
+                      <li><strong>LIME:</strong> Trains local surrogate models - takes ~3-5 minutes for 200 samples</li>
+                      <li>Both run in the background - you can navigate away while they compute</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Progress Indicators */}
+            {(isGeneratingExplanation || isGeneratingLime) && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-yellow-600"></div>
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-900">
+                      {isGeneratingExplanation && 'Generating SHAP explanation...'}
+                      {isGeneratingLime && 'Generating LIME explanation...'}
+                    </p>
+                    <p className="text-sm text-yellow-700">
+                      This may take a few minutes. The page will update automatically when complete.
+                    </p>
+                    {limeProgress && (
+                      <p className="text-sm text-yellow-600 mt-1 font-mono">{limeProgress}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex flex-wrap gap-3">
               <button
@@ -683,7 +725,7 @@ export default function ModelDetailPage() {
                 className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingExplanation ? 'Generating...' : 'Generate SHAP'}
+                {isGeneratingExplanation ? 'Generating...' : shapExplanation ? 'Regenerate SHAP' : 'Generate SHAP'}
               </button>
               <button
                 onClick={handleGenerateLime}
@@ -691,7 +733,7 @@ export default function ModelDetailPage() {
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingLime ? 'Generating...' : 'Generate LIME'}
+                {isGeneratingLime ? 'Generating...' : limeExplanation ? 'Regenerate LIME' : 'Generate LIME'}
               </button>
               <Link
                 href={`/models/${modelId}/compare`}
