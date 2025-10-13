@@ -22,6 +22,7 @@ import {
   Sliders,
   Globe,
   Target,
+  ArrowRight,
   ThumbsUp,
   ThumbsDown,
   Star,
@@ -388,8 +389,42 @@ export default function ExplainableAI() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Error State */}
-        {error && (
+        {/* Error/Info State with Actions */}
+        {error && viewMode === 'global' && error.includes('not found') && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="h-6 w-6 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-2">Global Explanations Not Available</h3>
+                <p className="text-sm text-blue-800 mb-4">
+                  To use the Global View, you need to generate SHAP and/or LIME explanations for this model.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center space-x-2"
+                  >
+                    <span>Go to Model Page</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                  <a
+                    href={`/models/${selectedModel?.model_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
+                  >
+                    Open in New Tab
+                  </a>
+                </div>
+                <p className="text-xs text-blue-700 mt-3">
+                  💡 Tip: SHAP takes ~3-5 seconds, LIME takes ~15 minutes. You can generate one or both.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {error && !(viewMode === 'global' && error.includes('not found')) && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5 text-red-600" />
