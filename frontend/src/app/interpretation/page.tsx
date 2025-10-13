@@ -1,18 +1,200 @@
+/**
+ * INTERPRETATION LAYER PAGE
+ * Route: /interpretation
+ * 
+ * Compares LLM-driven vs Rule-based interpretation of SHAP values
+ * for Home Credit Default Risk predictions
+ */
+
 'use client';
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { FileText, Brain, MessageSquare, AlertCircle, CheckCircle2, Info, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+  Brain, 
+  MessageSquare, 
+  AlertCircle, 
+  Info, 
+  Sparkles,
+  Download,
+  RefreshCw,
+  Star,
+  CheckCircle2,
+  Zap,
+  FileText
+} from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://xaiplatformmasterthesis-production.up.railway.app/api/v1';
+
+interface Model {
+  id: string;
+  name: string;
+  model_type: string;
+  dataset_id: string;
+}
+
+interface ShapData {
+  features: Array<{
+    feature: string;
+    contribution: number;
+    value: any;
+  }>;
+  prediction: string;
+  prediction_proba: number;
+}
+
+interface Interpretation {
+  mode: string;
+  interpretation: string;
+  top_features: string[];
+  confidence: number;
+  prediction: string;
+  method: string;
+  tokens_used?: number;
+}
 
 export default function InterpretationLayerPage() {
-  const [selectedExample, setSelectedExample] = useState<'shap' | 'lime' | null>(null);
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
+  const [shapData, setShapData] = useState<ShapData | null>(null);
+  const [mode, setMode] = useState<'llm' | 'rule-based' | 'compare'>('compare');
+  const [llmInterpretation, setLlmInterpretation] = useState<Interpretation | null>(null);
+  const [ruleInterpretation, setRuleInterpretation] = useState<Interpretation | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Rating state
+  const [clarity, setClarity] = useState(0);
+  const [trustworthiness, setTrustworthiness] = useState(0);
+  const [fairness, setFairness] = useState(0);
+
+  // Load models on mount
+  useEffect(() => {
+    loadModels();
+  }, []);
+
+  const loadModels = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/models/`);
+      setModels(response.data);
+    } catch (err) {
+      console.error('Failed to load models:', err);
+      setError('Failed to load models');
+    }
+  };
+
+  const loadShapData = async () => {
+    if (!selectedModel) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/interpretation/model/${selectedModel.id}/shap`
+      );
+      
+      // Transform SHAP explanation to expected format
+      const shapExplanation = response.data;
+      const transformedData: ShapData = {
+        features: Object.entries(shapExplanation.feature_importance || {}).map(([name, value]) => ({
+          feature: name,
+          contribution: value as number,
+          value: value
+        })).slice(0, 10), // Top 10 features
+        prediction: shapExplanation.prediction || 'Unknown',
+        prediction_proba: 0.5 // Default, can be enhanced
+      };
+      
+      setShapData(transformedData);
+    } catch (err: any) {
+      console.error('Failed to load SHAP data:', err);
+      setError(err.response?.data?.detail || 'Failed to load SHAP data. Please generate SHAP explanation first.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const generateInterpretation = async () => {
+    if (!selectedModel || !shapData) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (mode === 'compare') {
+        // Generate both
+        const response = await axios.post(
+          `${API_BASE_URL}/interpretation/compare`,
+          {
+            model_id: selectedModel.id,
+            shap_data: shapData
+          },
+          {
+            params: { model_id: selectedModel.id }
+          }
+        );
+        
+        setLlmInterpretation(response.data.llm);
+        setRuleInterpretation(response.data.rule_based);
+      } else {
+        // Generate single
+        const response = await axios.post(
+          `${API_BASE_URL}/interpretation/generate`,
+          {
+            model_id: selectedModel.id,
+            shap_data: shapData,
+            mode: mode
+          }
+        );
+        
+        if (mode === 'llm') {
+          setLlmInterpretation(response.data);
+        } else {
+          setRuleInterpretation(response.data);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to generate interpretation:', err);
+      setError(err.response?.data?.detail || 'Failed to generate interpretation');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitFeedback = async (interpretationMode: string) => {
+    if (clarity === 0 || trustworthiness === 0 || fairness === 0) {
+      alert('Please rate all dimensions');
+      return;
+    }
+    
+    try {
+      await axios.post(`${API_BASE_URL}/interpretation/feedback`, {
+        interpretation_id: `${selectedModel?.id}_${interpretationMode}_${Date.now()}`,
+        model_id: selectedModel?.id,
+        mode: interpretationMode,
+        clarity,
+        trustworthiness,
+        fairness
+      });
+      
+      alert('Thank you for your feedback!');
+      setClarity(0);
+      setTrustworthiness(0);
+      setFairness(0);
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+      alert('Failed to submit feedback');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
-        <div className="mb-12">
+        <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
             <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
               <MessageSquare className="h-8 w-8 text-white" />
@@ -20,7 +202,7 @@ export default function InterpretationLayerPage() {
             <div>
               <h1 className="text-4xl font-bold text-gray-900">Interpretation Layer</h1>
               <p className="text-lg text-gray-600 mt-2">
-                Converting complex AI explanations into human-understandable insights
+                Translating AI into Human Reasoning
               </p>
             </div>
           </div>
@@ -31,224 +213,284 @@ export default function InterpretationLayerPage() {
           <div className="flex items-start space-x-3">
             <Info className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-blue-900 mb-2">Purpose</h3>
+              <h3 className="font-semibold text-blue-900 mb-2">Master's Thesis Research</h3>
               <p className="text-blue-800 text-sm">
-                This layer bridges the gap between technical model explanations (SHAP/LIME) and 
-                regulatory interpretation. It translates complex feature importance scores and 
-                contribution values into natural language that stakeholders can understand and 
-                use for compliance, auditing, and decision-making.
+                This page compares two paradigms of interpretability translation for financial AI:
+                <strong> (1) LLM-driven</strong> natural language generation using GPT-4, and
+                <strong> (2) Rule-based</strong> deterministic SHAP reasoning.
+                Your ratings help evaluate which approach provides better explanations.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          {/* SHAP Interpretation Example */}
-          <div 
-            className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition-all ${
-              selectedExample === 'shap' ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-blue-300'
-            }`}
-            onClick={() => setSelectedExample('shap')}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Brain className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">SHAP Translation</h3>
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <p className="text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Section 1: Model Selection */}
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+            <Brain className="h-5 w-5 text-indigo-600" />
+            <span>1. Select Model</span>
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Trained Model
+              </label>
+              <select
+                value={selectedModel?.id || ''}
+                onChange={(e) => {
+                  const model = models.find(m => m.id === e.target.value);
+                  setSelectedModel(model || null);
+                  setShapData(null);
+                  setLlmInterpretation(null);
+                  setRuleInterpretation(null);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Choose a model...</option>
+                {models.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} ({model.model_type})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {selectedModel && (
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">Dataset</p>
+                <p className="text-lg font-semibold text-gray-900">{selectedModel.dataset_id}</p>
               </div>
-              {selectedExample === 'shap' && (
-                <CheckCircle2 className="h-6 w-6 text-blue-600" />
+            )}
+          </div>
+          
+          {selectedModel && !shapData && (
+            <button
+              onClick={loadShapData}
+              disabled={isLoading}
+              className="mt-4 flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? 'Loading...' : 'Load SHAP Data'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Section 2: SHAP Data Preview */}
+        {shapData && (
+          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              <span>2. SHAP Output (Top Features)</span>
+            </h2>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-gray-700 mb-2">
+                Prediction: <span className="text-indigo-600">{shapData.prediction}</span>
+              </p>
+              <div className="space-y-2">
+                {shapData.features.slice(0, 5).map((feature, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700">{feature.feature}</span>
+                    <span className={`font-mono ${feature.contribution > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {feature.contribution > 0 ? '+' : ''}{feature.contribution.toFixed(3)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Mode Selection */}
+        {shapData && (
+          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">3. Select Interpretation Mode</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <button
+                onClick={() => setMode('llm')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  mode === 'llm' 
+                    ? 'border-purple-500 bg-purple-50' 
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}
+              >
+                <Sparkles className="h-6 w-6 text-purple-600 mb-2" />
+                <h3 className="font-semibold text-gray-900">LLM Mode</h3>
+                <p className="text-sm text-gray-600">GPT-4 Turbo</p>
+              </button>
+              
+              <button
+                onClick={() => setMode('rule-based')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  mode === 'rule-based' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-blue-300'
+                }`}
+              >
+                <Zap className="h-6 w-6 text-blue-600 mb-2" />
+                <h3 className="font-semibold text-gray-900">Rule-Based</h3>
+                <p className="text-sm text-gray-600">Deterministic</p>
+              </button>
+              
+              <button
+                onClick={() => setMode('compare')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  mode === 'compare' 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-200 hover:border-green-300'
+                }`}
+              >
+                <CheckCircle2 className="h-6 w-6 text-green-600 mb-2" />
+                <h3 className="font-semibold text-gray-900">Compare Both</h3>
+                <p className="text-sm text-gray-600">Side-by-side</p>
+              </button>
+            </div>
+            
+            <button
+              onClick={generateInterpretation}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 font-semibold"
+            >
+              <Sparkles className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span>{isLoading ? 'Generating...' : 'Generate Interpretation'}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Section 4: Comparison Panel */}
+        {(llmInterpretation || ruleInterpretation) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* LLM Interpretation */}
+            {llmInterpretation && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                    <Sparkles className="h-5 w-5 text-purple-600" />
+                    <span>LLM Interpretation</span>
+                  </h3>
+                  <span className="text-xs text-gray-500">{llmInterpretation.method}</span>
+                </div>
+                
+                <div className="prose prose-sm max-w-none">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 whitespace-pre-wrap">
+                    {llmInterpretation.interpretation}
+                  </div>
+                </div>
+                
+                {llmInterpretation.tokens_used && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Tokens used: {llmInterpretation.tokens_used}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {/* Rule-Based Interpretation */}
+            {ruleInterpretation && (
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    <span>Rule-Based Interpretation</span>
+                  </h3>
+                  <span className="text-xs text-gray-500">{ruleInterpretation.method}</span>
+                </div>
+                
+                <div className="prose prose-sm max-w-none">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 whitespace-pre-wrap">
+                    {ruleInterpretation.interpretation}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 5: Rating */}
+        {(llmInterpretation || ruleInterpretation) && (
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+              <Star className="h-5 w-5 text-yellow-500" />
+              <span>4. Rate the Explanation Quality</span>
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Clarity (1-5)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={clarity || ''}
+                  onChange={(e) => setClarity(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trustworthiness (1-5)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={trustworthiness || ''}
+                  onChange={(e) => setTrustworthiness(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fairness (1-5)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={fairness || ''}
+                  onChange={(e) => setFairness(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              {llmInterpretation && (
+                <button
+                  onClick={() => submitFeedback('llm')}
+                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Submit LLM Rating
+                </button>
+              )}
+              
+              {ruleInterpretation && (
+                <button
+                  onClick={() => submitFeedback('rule-based')}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Submit Rule-Based Rating
+                </button>
               )}
             </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Technical Output</p>
-                <code className="text-sm text-gray-700 block">
-                  Feature: "credit_history_length"<br />
-                  SHAP Value: -0.23<br />
-                  Base Value: 0.15
-                </code>
-              </div>
-
-              <div className="flex items-center justify-center">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-                <p className="text-xs font-semibold text-blue-700 uppercase mb-2">Human Interpretation</p>
-                <p className="text-sm text-gray-800">
-                  "The applicant's <strong>short credit history</strong> significantly <strong>decreases</strong> their 
-                  likelihood of loan approval by 23 percentage points. This is a <strong>major risk factor</strong> 
-                  that requires additional verification or collateral."
-                </p>
-              </div>
-            </div>
           </div>
-
-          {/* LIME Interpretation Example */}
-          <div 
-            className={`bg-white rounded-lg shadow-sm border-2 p-6 cursor-pointer transition-all ${
-              selectedExample === 'lime' ? 'border-orange-500 shadow-lg' : 'border-gray-200 hover:border-orange-300'
-            }`}
-            onClick={() => setSelectedExample('lime')}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <FileText className="h-6 w-6 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900">LIME Translation</h3>
-              </div>
-              {selectedExample === 'lime' && (
-                <CheckCircle2 className="h-6 w-6 text-orange-600" />
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Technical Output</p>
-                <code className="text-sm text-gray-700 block">
-                  Feature: "debt_to_income_ratio"<br />
-                  Weight: 0.45<br />
-                  Value: 0.62 (High)
-                </code>
-              </div>
-
-              <div className="flex items-center justify-center">
-                <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-full">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-4 border border-orange-200">
-                <p className="text-xs font-semibold text-orange-700 uppercase mb-2">Human Interpretation</p>
-                <p className="text-sm text-gray-800">
-                  "The applicant's <strong>high debt-to-income ratio (62%)</strong> is the <strong>strongest indicator</strong> 
-                  of potential default risk. This exceeds the recommended threshold of 40% and suggests the applicant 
-                  may struggle with additional debt obligations."
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Key Features */}
-        <div className="bg-white rounded-lg shadow-sm border p-8 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Interpretation Layer Capabilities</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Natural Language Generation</h3>
-                <p className="text-sm text-gray-600">
-                  Converts numerical feature contributions into clear, contextual explanations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Regulatory Compliance</h3>
-                <p className="text-sm text-gray-600">
-                  Formats explanations to meet GDPR, FCRA, and other regulatory requirements
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Risk Assessment</h3>
-                <p className="text-sm text-gray-600">
-                  Categorizes factors as major, moderate, or minor risk indicators
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3">
-              <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Actionable Insights</h3>
-                <p className="text-sm text-gray-600">
-                  Provides recommendations for risk mitigation or approval conditions
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Use Cases */}
-        <div className="bg-white rounded-lg shadow-sm border p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Regulatory Use Cases</h2>
-          
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3 p-4 bg-blue-50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-blue-900 mb-1">Adverse Action Notices (FCRA)</h3>
-                <p className="text-sm text-blue-800">
-                  Automatically generate legally compliant explanations for loan denials or unfavorable terms
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-4 bg-purple-50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-purple-900 mb-1">Right to Explanation (GDPR)</h3>
-                <p className="text-sm text-purple-800">
-                  Provide data subjects with meaningful information about automated decision-making
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-4 bg-green-50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-green-900 mb-1">Model Auditing & Documentation</h3>
-                <p className="text-sm text-green-800">
-                  Create audit trails with human-readable explanations for regulatory review
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-4 bg-orange-50 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-orange-900 mb-1">Stakeholder Communication</h3>
-                <p className="text-sm text-orange-800">
-                  Enable non-technical stakeholders to understand and trust AI-driven decisions
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Coming Soon Badge */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-full">
-            <Sparkles className="h-5 w-5" />
-            <span className="font-semibold">Full Implementation Coming Soon</span>
-          </div>
-          <p className="text-gray-600 mt-4 text-sm">
-            This page demonstrates the concept. Integration with live SHAP/LIME outputs is under development.
-          </p>
-        </div>
+        )}
       </div>
     </div>
   );
