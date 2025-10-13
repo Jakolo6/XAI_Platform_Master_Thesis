@@ -98,41 +98,29 @@ export const useModelsStore = create<ModelsState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await modelsAPI.getById(id);
-      // Backend returns model with metrics merged in
       const modelData = response.data;
       
-      console.log('Full response object:', response);
-      console.log('response.data:', modelData);
-      console.log('Keys in modelData:', Object.keys(modelData || {}));
-      console.log('auc_roc from response:', modelData?.auc_roc);
-      console.log('Type of modelData:', typeof modelData);
-      
-      // Extract metrics from the model data
-      const metrics: any = {
+      // Debug logging
+      console.log('[MODELS STORE] Fetched model data:', {
+        id: modelData?.id,
+        hasAucRoc: 'auc_roc' in (modelData || {}),
         auc_roc: modelData?.auc_roc,
-        auc_pr: modelData?.auc_pr,
         f1_score: modelData?.f1_score,
-        precision: modelData?.precision,
-        recall: modelData?.recall,
         accuracy: modelData?.accuracy,
-        log_loss: modelData?.log_loss,
-        brier_score: modelData?.brier_score,
-        confusion_matrix: modelData?.confusion_matrix,
-        expected_calibration_error: modelData?.expected_calibration_error,
-        maximum_calibration_error: modelData?.maximum_calibration_error,
-        roc_curve: modelData?.roc_curve,
-        pr_curve: modelData?.pr_curve,
-      };
+        allKeys: Object.keys(modelData || {})
+      });
       
-      console.log('Extracted metrics:', metrics);
-      
+      // Set both selectedModel and selectedMetrics to the same data
+      // The backend returns metrics merged into the model object
       set({ 
         selectedModel: modelData,
-        selectedMetrics: metrics,
+        selectedMetrics: modelData, // Metrics are part of the model data
         isLoading: false 
       });
+      
+      console.log('[MODELS STORE] State updated successfully');
     } catch (error: any) {
-      console.error('Error fetching model:', error);
+      console.error('[MODELS STORE] Error fetching model:', error);
       set({
         error: error.response?.data?.detail || 'Failed to fetch model',
         isLoading: false,
