@@ -120,14 +120,24 @@ class SupabaseClient:
             return None
     
     def get_model(self, model_id: str) -> Optional[Dict]:
-        """Get model by model_id."""
+        """Get model by model_id or id."""
         if not self.is_available():
             return None
         
         try:
-            # Search by model_id field, not id field
-            result = self.client.table('models').select('*').eq('model_id', model_id).execute()
-            return result.data[0] if result.data else None
+            # Try to find by id field first (which may have _metrics suffix)
+            # The model_id parameter from the URL doesn't have _metrics suffix
+            # So we need to search for records where id starts with model_id
+            result = self.client.table('models').select('*').execute()
+            
+            if result.data:
+                # Filter in Python to find matching model
+                for model in result.data:
+                    # Check if id matches exactly or if id starts with model_id
+                    if model.get('id') == model_id or model.get('id', '').startswith(model_id):
+                        return model
+            
+            return None
         except Exception as e:
             logger.error("Failed to get model", model_id=model_id, error=str(e))
             return None
