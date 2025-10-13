@@ -11,7 +11,10 @@ from typing import Dict, Any
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score,
+    roc_curve, confusion_matrix, precision_recall_curve
+)
 import structlog
 
 try:
@@ -117,6 +120,7 @@ class ModelTrainingService:
                 y_pred = model.predict(X_test)
                 y_pred_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, 'predict_proba') else y_pred
                 
+                # Calculate basic metrics
                 metrics = {
                     'accuracy': float(accuracy_score(y_test, y_pred)),
                     'precision': float(precision_score(y_test, y_pred, average='binary', zero_division=0)),
@@ -125,7 +129,35 @@ class ModelTrainingService:
                     'auc_roc': float(roc_auc_score(y_test, y_pred_proba)) if len(np.unique(y_test)) > 1 else 0.0
                 }
                 
-                logger.info("Model evaluation complete", metrics=metrics)
+                # Calculate ROC curve
+                if hasattr(model, 'predict_proba') and len(np.unique(y_test)) > 1:
+                    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+                    metrics['roc_curve'] = {
+                        'fpr': fpr.tolist(),
+                        'tpr': tpr.tolist(),
+                        'thresholds': thresholds.tolist()
+                    }
+                else:
+                    metrics['roc_curve'] = None
+                
+                # Calculate confusion matrix
+                cm = confusion_matrix(y_test, y_pred)
+                metrics['confusion_matrix'] = cm.tolist()
+                
+                # Calculate PR curve
+                if hasattr(model, 'predict_proba') and len(np.unique(y_test)) > 1:
+                    precision_vals, recall_vals, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
+                    metrics['pr_curve'] = {
+                        'precision': precision_vals.tolist(),
+                        'recall': recall_vals.tolist(),
+                        'thresholds': pr_thresholds.tolist()
+                    }
+                else:
+                    metrics['pr_curve'] = None
+                
+                logger.info("Model evaluation complete", 
+                           accuracy=metrics['accuracy'],
+                           auc_roc=metrics['auc_roc'])
                 
                 # 8. Get feature importance
                 feature_importance = self._get_feature_importance(model, X_train.columns)
@@ -171,7 +203,10 @@ class ModelTrainingService:
                         'precision': metrics['precision'],
                         'recall': metrics['recall'],
                         'f1_score': metrics['f1_score'],
-                        'auc_roc': metrics['auc_roc']
+                        'auc_roc': metrics['auc_roc'],
+                        'roc_curve': metrics.get('roc_curve'),
+                        'confusion_matrix': metrics.get('confusion_matrix'),
+                        'pr_curve': metrics.get('pr_curve')
                     }
                     supabase_db.create_model_metrics(metrics_data)
                 
