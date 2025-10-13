@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = "xai-platform-datasets"
+    
+    # OpenAI API
+    OPENAI_API_KEY: str = ""
     R2_ENDPOINT_URL: str = "https://ff9c5d15c3296ba6a3aa9a96d1163cfe.r2.cloudflarestorage.com"
     R2_PUBLIC_URL: str = ""  # Optional: for public access
     

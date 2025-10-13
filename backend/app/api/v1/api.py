@@ -3,7 +3,7 @@ Main API router.
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import health, auth, explanations, study, reports, benchmarks, humanstudy, datasets, models, research, sandbox, home_credit
+from app.api.v1.endpoints import health, auth, explanations, study, reports, benchmarks, humanstudy, datasets, models, research, sandbox, home_credit, interpretation
 
 api_router = APIRouter()
 
@@ -16,6 +16,7 @@ api_router.include_router(datasets.router, prefix="/datasets", tags=["datasets"]
 api_router.include_router(models.router, prefix="/models", tags=["models"])
 api_router.include_router(sandbox.router, prefix="/sandbox", tags=["sandbox"])
 api_router.include_router(explanations.router, prefix="/explanations", tags=["explanations"])
+api_router.include_router(interpretation.router, prefix="/interpretation", tags=["interpretation"])
 api_router.include_router(benchmarks.router, prefix="/benchmarks", tags=["benchmarks"])
 api_router.include_router(research.router, prefix="/research", tags=["research"])
 api_router.include_router(study.router, prefix="/study", tags=["study"])

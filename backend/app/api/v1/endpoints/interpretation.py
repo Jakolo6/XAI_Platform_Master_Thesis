@@ -1,0 +1,234 @@
+"""
+Interpretation Layer API endpoints.
+
+Provides both LLM-driven and rule-based interpretation of SHAP values.
+"""
+
+from fastapi import APIRouter, HTTPException, Depends
+from typing import Dict, Any, Optional, Literal
+from pydantic import BaseModel
+import structlog
+
+from app.api.dependencies import get_current_researcher
+from app.services.interpretation_service import interpretation_service
+from app.utils.supabase_client import supabase_db
+
+router = APIRouter()
+logger = structlog.get_logger()
+
+
+class InterpretationRequest(BaseModel):
+    """Request schema for generating interpretations."""
+    model_id: str
+    shap_data: Dict[str, Any]
+    mode: Literal["llm", "rule-based"] = "rule-based"
+
+
+class InterpretationFeedback(BaseModel):
+    """Feedback schema for interpretation quality."""
+    interpretation_id: str
+    model_id: str
+    mode: str
+    clarity: int  # 1-5
+    trustworthiness: int  # 1-5
+    fairness: int  # 1-5
+    comments: Optional[str] = None
+
+
+@router.post("/generate")
+async def generate_interpretation(
+    request: InterpretationRequest,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Generate human-readable interpretation from SHAP data.
+    
+    Supports two modes:
+    - llm: Uses OpenAI GPT-4 for natural language generation
+    - rule-based: Uses deterministic SHAP reasoning rules
+    
+    Args:
+        request: Interpretation request with model_id, SHAP data, and mode
+        current_user: Authenticated user
+        
+    Returns:
+        Interpretation text and metadata
+    """
+    try:
+        # Get model context
+        model = supabase_db.get_model(request.model_id)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
+        
+        model_context = {
+            "model_type": model.get("model_type"),
+            "dataset_id": model.get("dataset_id"),
+            "name": model.get("name")
+        }
+        
+        # Generate interpretation
+        logger.info("Generating interpretation",
+                   model_id=request.model_id,
+                   mode=request.mode)
+        
+        result = interpretation_service.generate_interpretation(
+            shap_data=request.shap_data,
+            mode=request.mode,
+            model_context=model_context
+        )
+        
+        logger.info("Interpretation generated successfully",
+                   model_id=request.model_id,
+                   mode=request.mode)
+        
+        return result
+        
+    except ValueError as e:
+        logger.error("Invalid request", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Failed to generate interpretation",
+                    model_id=request.model_id,
+                    error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/compare")
+async def compare_interpretations(
+    model_id: str,
+    shap_data: Dict[str, Any],
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Generate both LLM and rule-based interpretations for comparison.
+    
+    Args:
+        model_id: Model identifier
+        shap_data: SHAP explanation data
+        current_user: Authenticated user
+        
+    Returns:
+        Both interpretations side-by-side
+    """
+    try:
+        # Get model context
+        model = supabase_db.get_model(model_id)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        
+        model_context = {
+            "model_type": model.get("model_type"),
+            "dataset_id": model.get("dataset_id"),
+            "name": model.get("name")
+        }
+        
+        logger.info("Generating both interpretations for comparison", model_id=model_id)
+        
+        # Generate both interpretations
+        llm_result = interpretation_service.generate_interpretation(
+            shap_data=shap_data,
+            mode="llm",
+            model_context=model_context
+        )
+        
+        rule_based_result = interpretation_service.generate_interpretation(
+            shap_data=shap_data,
+            mode="rule-based",
+            model_context=model_context
+        )
+        
+        return {
+            "llm": llm_result,
+            "rule_based": rule_based_result,
+            "model_context": model_context
+        }
+        
+    except Exception as e:
+        logger.error("Failed to generate comparison",
+                    model_id=model_id,
+                    error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/feedback")
+async def submit_feedback(
+    feedback: InterpretationFeedback,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Submit feedback on interpretation quality.
+    
+    This data is used for master's thesis research on interpretability.
+    
+    Args:
+        feedback: User ratings and comments
+        current_user: Authenticated user
+        
+    Returns:
+        Confirmation message
+    """
+    try:
+        # Save feedback to Supabase
+        feedback_data = {
+            "interpretation_id": feedback.interpretation_id,
+            "model_id": feedback.model_id,
+            "mode": feedback.mode,
+            "clarity": feedback.clarity,
+            "trustworthiness": feedback.trustworthiness,
+            "fairness": feedback.fairness,
+            "comments": feedback.comments,
+            "user_id": current_user
+        }
+        
+        if supabase_db.is_available():
+            result = supabase_db.client.table('interpretation_feedback').insert(feedback_data).execute()
+            logger.info("Feedback saved", interpretation_id=feedback.interpretation_id)
+        
+        return {
+            "status": "success",
+            "message": "Thank you for your feedback!"
+        }
+        
+    except Exception as e:
+        logger.error("Failed to save feedback", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/model/{model_id}/shap")
+async def get_model_shap_data(
+    model_id: str,
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Get SHAP explanation data for a model.
+    
+    Args:
+        model_id: Model identifier
+        current_user: Authenticated user
+        
+    Returns:
+        SHAP explanation data
+    """
+    try:
+        # Get SHAP explanations for this model
+        explanations = supabase_db.list_explanations(model_id=model_id)
+        
+        # Find SHAP global explanation
+        shap_explanation = next(
+            (exp for exp in explanations if exp.get('method') == 'shap' and exp.get('status') == 'completed'),
+            None
+        )
+        
+        if not shap_explanation:
+            raise HTTPException(
+                status_code=404,
+                detail="No SHAP explanation found for this model. Please generate one first."
+            )
+        
+        return shap_explanation
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to get SHAP data", model_id=model_id, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
