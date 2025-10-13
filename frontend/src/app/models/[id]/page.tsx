@@ -728,22 +728,6 @@ export default function ModelDetailPage() {
 
             {/* Actions */}
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={handleGenerateExplanation}
-                disabled={isGeneratingExplanation || (selectedModel?.model_type !== 'xgboost' && selectedModel?.model_type !== 'catboost' && selectedModel?.model_type !== 'lightgbm' && selectedModel?.model_type !== 'random_forest')}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingExplanation ? 'Generating...' : shapExplanation ? 'Regenerate SHAP' : 'Generate SHAP'}
-              </button>
-              <button
-                onClick={handleGenerateLime}
-                disabled={isGeneratingLime || (selectedModel?.model_type !== 'xgboost' && selectedModel?.model_type !== 'catboost' && selectedModel?.model_type !== 'lightgbm' && selectedModel?.model_type !== 'random_forest')}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isGeneratingLime ? 'Generating...' : limeExplanation ? 'Regenerate LIME' : 'Generate LIME'}
-              </button>
               <Link
                 href={`/models/${modelId}/compare`}
                 className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg hover:from-blue-700 hover:to-green-700"
