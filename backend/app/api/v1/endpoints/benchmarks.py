@@ -248,13 +248,14 @@ async def get_leaderboard(
                     continue
                 
                 leaderboard.append({
-                    'model_id': model['id'],
+                    'model_id': model.get('model_id', model['id']),  # Use model_id field, fallback to id
                     'model_name': model.get('name'),
                     'model_type': model['model_type'],
                     'dataset_id': model.get('dataset_id'),
                     'score': score,
                     'auc_roc': metrics.get('auc_roc'),
                     'f1_score': metrics.get('f1_score'),
+                    'accuracy': metrics.get('accuracy'),
                     'training_time_seconds': model.get('training_time_seconds'),
                     'model_size_mb': model.get('model_size_mb')
                 })
