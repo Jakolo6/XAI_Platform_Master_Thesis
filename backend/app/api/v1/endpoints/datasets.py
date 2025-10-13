@@ -31,7 +31,7 @@ async def move_home_credit_data():
         
         # List all objects with old prefix
         response = r2_storage_client.client.list_objects_v2(
-            Bucket=r2_storage_client.bucket_name,
+            Bucket=r2_storage_client.bucket,
             Prefix=old_prefix
         )
         
@@ -55,14 +55,14 @@ async def move_home_credit_data():
             
             # Copy object to new location
             r2_storage_client.client.copy_object(
-                Bucket=r2_storage_client.bucket_name,
-                CopySource={'Bucket': r2_storage_client.bucket_name, 'Key': old_key},
+                Bucket=r2_storage_client.bucket,
+                CopySource={'Bucket': r2_storage_client.bucket, 'Key': old_key},
                 Key=new_key
             )
             
             # Delete old object
             r2_storage_client.client.delete_object(
-                Bucket=r2_storage_client.bucket_name,
+                Bucket=r2_storage_client.bucket,
                 Key=old_key
             )
             
