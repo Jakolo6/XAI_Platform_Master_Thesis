@@ -78,7 +78,7 @@ export const modelsAPI = {
   
   getMetrics: (id: string) => api.get(`/models/${id}/metrics`),
   
-  getLeaderboard: () => api.get('/models/leaderboard/performance'),
+  getLeaderboard: () => api.get('/benchmarks/leaderboard'),
   
   getComparison: (modelIds: string[]) =>
     api.get('/models/leaderboard/comparison', { params: { model_ids: modelIds } }),
