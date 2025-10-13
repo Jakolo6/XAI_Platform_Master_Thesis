@@ -71,6 +71,15 @@ export default function ModelDetailPage() {
     });
   }, [modelId, fetchModelById, fetchModelMetrics]);
 
+  // Debug logging
+  useEffect(() => {
+    if (selectedMetrics) {
+      console.log('selectedMetrics:', selectedMetrics);
+      console.log('auc_roc:', selectedMetrics.auc_roc);
+      console.log('f1_score:', selectedMetrics.f1_score);
+    }
+  }, [selectedMetrics]);
+
   /**
    * Load existing explanations for the model
    */
