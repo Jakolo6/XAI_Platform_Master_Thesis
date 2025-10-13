@@ -11,9 +11,73 @@ from app.api.dependencies import get_current_researcher
 from app.services.dataset_service import dataset_service
 from app.utils.supabase_client import supabase_db
 from app.datasets.registry import get_dataset_registry
+from app.utils.r2_storage_client import r2_storage_client
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+@router.post("/move-home-credit-data")
+async def move_home_credit_data():
+    """
+    Move home-credit data from home-credit/ to datasets/home-credit-default-risk/
+    This is a one-time migration endpoint.
+    """
+    try:
+        old_prefix = "home-credit/"
+        new_prefix = "datasets/home-credit-default-risk/"
+        
+        logger.info("Starting to move home-credit data")
+        
+        # List all objects with old prefix
+        response = r2_storage_client.client.list_objects_v2(
+            Bucket=r2_storage_client.bucket_name,
+            Prefix=old_prefix
+        )
+        
+        if 'Contents' not in response:
+            return {"status": "success", "message": "No files found in home-credit/", "files_moved": 0}
+        
+        files_to_move = response['Contents']
+        moved_count = 0
+        
+        for obj in files_to_move:
+            old_key = obj['Key']
+            # Skip if it's just the directory marker
+            if old_key == old_prefix:
+                continue
+                
+            # Create new key by replacing prefix
+            relative_path = old_key[len(old_prefix):]
+            new_key = new_prefix + relative_path
+            
+            logger.info(f"Copying {old_key} -> {new_key}")
+            
+            # Copy object to new location
+            r2_storage_client.client.copy_object(
+                Bucket=r2_storage_client.bucket_name,
+                CopySource={'Bucket': r2_storage_client.bucket_name, 'Key': old_key},
+                Key=new_key
+            )
+            
+            # Delete old object
+            r2_storage_client.client.delete_object(
+                Bucket=r2_storage_client.bucket_name,
+                Key=old_key
+            )
+            
+            moved_count += 1
+            logger.info(f"Moved {old_key} to {new_key}")
+        
+        return {
+            "status": "success",
+            "message": f"Successfully moved {moved_count} files from {old_prefix} to {new_prefix}",
+            "files_moved": moved_count
+        }
+        
+    except Exception as e:
+        logger.error("Failed to move home-credit data", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class DatasetProcessRequest(BaseModel):
