@@ -522,48 +522,148 @@ export default function ExplainableAI() {
         </div>
 
         {/* Explanation Comparison Panel */}
-        {shapExplanation && limeExplanation && (
+        {(shapExplanation || limeExplanation) && (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* SHAP Explanation */}
-              <ExplanationCard
-                title="SHAP Explanation"
-                method="shap"
-                explanation={shapExplanation}
-                color="blue"
-              />
-              
-              {/* LIME Explanation */}
-              <ExplanationCard
-                title="LIME Explanation"
-                method="lime"
-                explanation={limeExplanation}
-                color="orange"
-              />
+            {/* View Mode Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg shadow-sm p-6 mb-6 text-white">
+              <h2 className="text-2xl font-bold mb-2 flex items-center space-x-2">
+                {viewMode === 'local' ? (
+                  <>
+                    <Target className="h-6 w-6" />
+                    <span>Local Explanation - Instance Level</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe className="h-6 w-6" />
+                    <span>Global Explanation - Model Level</span>
+                  </>
+                )}
+              </h2>
+              <p className="text-purple-100">
+                {viewMode === 'local' 
+                  ? 'Understanding why the model made this specific prediction'
+                  : 'Understanding which features are most important across all predictions'}
+              </p>
             </div>
 
-            {/* Interpretation Layer */}
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-                  <Info className="h-5 w-5 text-purple-600" />
-                  <span>3. Human-Readable Interpretation</span>
-                </h2>
-                <button
-                  onClick={() => setShowDisagreement(!showDisagreement)}
-                  className="text-sm text-purple-600 hover:text-purple-700 flex items-center space-x-1"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{showDisagreement ? 'Hide' : 'Show'} Disagreements</span>
-                </button>
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* SHAP Explanation */}
+              {shapExplanation && (
+                <ExplanationCard
+                  title={viewMode === 'local' ? 'SHAP Explanation' : 'SHAP Global Importance'}
+                  method="shap"
+                  explanation={shapExplanation}
+                  color="blue"
+                />
+              )}
               
-              <div className="prose max-w-none">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 whitespace-pre-line">
-                  {interpretation}
+              {/* LIME Explanation */}
+              {limeExplanation && (
+                <ExplanationCard
+                  title={viewMode === 'local' ? 'LIME Explanation' : 'LIME Global Importance'}
+                  method="lime"
+                  explanation={limeExplanation}
+                  color="orange"
+                />
+              )}
+              
+              {/* Placeholder if only one method available */}
+              {shapExplanation && !limeExplanation && (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mb-3" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">LIME Not Available</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Generate LIME explanation to compare both methods
+                  </p>
+                  <button
+                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
+                  >
+                    Generate LIME
+                  </button>
+                </div>
+              )}
+              
+              {!shapExplanation && limeExplanation && (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mb-3" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">SHAP Not Available</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Generate SHAP explanation to compare both methods
+                  </p>
+                  <button
+                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    Generate SHAP
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Interpretation Layer - Only for Local View */}
+            {viewMode === 'local' && interpretation && (
+              <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                    <Info className="h-5 w-5 text-purple-600" />
+                    <span>3. Human-Readable Interpretation</span>
+                  </h2>
+                  <button
+                    onClick={() => setShowDisagreement(!showDisagreement)}
+                    className="text-sm text-purple-600 hover:text-purple-700 flex items-center space-x-1"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{showDisagreement ? 'Hide' : 'Show'} Disagreements</span>
+                  </button>
+                </div>
+                
+                <div className="prose max-w-none">
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 whitespace-pre-line">
+                    {interpretation}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+            
+            {/* Global Comparison Insights */}
+            {viewMode === 'global' && shapExplanation && limeExplanation && (
+              <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-purple-600" />
+                  <span>3. Method Comparison</span>
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-blue-900 mb-2">SHAP Characteristics</h3>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>✓ Based on game theory (Shapley values)</li>
+                      <li>✓ Consistent and locally accurate</li>
+                      <li>✓ Shows feature interactions</li>
+                      <li>✓ Top {shapExplanation.features.length} features analyzed</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h3 className="font-semibold text-orange-900 mb-2">LIME Characteristics</h3>
+                    <ul className="text-sm text-orange-800 space-y-1">
+                      <li>✓ Local linear approximation</li>
+                      <li>✓ Model-agnostic approach</li>
+                      <li>✓ Interpretable by design</li>
+                      <li>✓ Top {limeExplanation.features.length} features analyzed</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <p className="text-sm text-purple-900">
+                    <strong>💡 Tip:</strong> Compare the top features from both methods. 
+                    Features that appear in both lists are likely the most important for your model's predictions.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Human Interpretability Rating */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
