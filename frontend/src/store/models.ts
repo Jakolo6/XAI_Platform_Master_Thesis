@@ -100,12 +100,36 @@ export const useModelsStore = create<ModelsState>((set) => ({
       const response = await modelsAPI.getById(id);
       // Backend returns model with metrics merged in
       const modelData = response.data;
+      
+      console.log('Raw API response:', modelData);
+      console.log('auc_roc from response:', modelData?.auc_roc);
+      
+      // Extract metrics from the model data
+      const metrics: any = {
+        auc_roc: modelData.auc_roc,
+        auc_pr: modelData.auc_pr,
+        f1_score: modelData.f1_score,
+        precision: modelData.precision,
+        recall: modelData.recall,
+        accuracy: modelData.accuracy,
+        log_loss: modelData.log_loss,
+        brier_score: modelData.brier_score,
+        confusion_matrix: modelData.confusion_matrix,
+        expected_calibration_error: modelData.expected_calibration_error,
+        maximum_calibration_error: modelData.maximum_calibration_error,
+        roc_curve: modelData.roc_curve,
+        pr_curve: modelData.pr_curve,
+      };
+      
+      console.log('Extracted metrics:', metrics);
+      
       set({ 
         selectedModel: modelData,
-        selectedMetrics: modelData, // Metrics are already in the model data
+        selectedMetrics: metrics,
         isLoading: false 
       });
     } catch (error: any) {
+      console.error('Error fetching model:', error);
       set({
         error: error.response?.data?.detail || 'Failed to fetch model',
         isLoading: false,
