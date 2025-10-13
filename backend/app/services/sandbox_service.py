@@ -44,14 +44,12 @@ class SandboxService:
                 df = pd.read_parquet(test_path)
                 
                 # Separate features and target
-                target_col = 'isFraud' if 'isFraud' in df.columns else 'target'
-                if target_col not in df.columns:
-                    # Try to find target column
-                    possible_targets = ['label', 'class', 'y', 'TARGET']
-                    for col in possible_targets:
-                        if col in df.columns:
-                            target_col = col
-                            break
+                target_col = None
+                possible_targets = ['isFraud', 'target', 'Risk', 'label', 'class', 'y', 'TARGET']
+                for col in possible_targets:
+                    if col in df.columns:
+                        target_col = col
+                        break
                 
                 if target_col not in df.columns:
                     raise ValueError(f"Could not find target column in test data. Columns: {df.columns.tolist()}")
