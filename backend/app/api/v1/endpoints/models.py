@@ -110,11 +110,13 @@ async def train_model(
         
         # Wrapper to catch background task errors
         async def train_with_error_handling():
+            import sys
             try:
                 logger.info("🚀 Background training started",
                            dataset_id=request.dataset_id,
                            model_type=request.model_type,
                            model_name=request.model_name)
+                sys.stdout.flush()  # Force log flush
                 
                 result = model_service.train_model(
                     request.dataset_id,
@@ -126,12 +128,14 @@ async def train_model(
                 logger.info("✅ Background training completed",
                            dataset_id=request.dataset_id,
                            result_status=result.get('status'))
+                sys.stdout.flush()  # Force log flush
                 
             except Exception as e:
                 logger.error("❌ Background training failed",
                            dataset_id=request.dataset_id,
                            error=str(e),
                            exc_info=True)
+                sys.stdout.flush()  # Force log flush
         
         # Add wrapped task to background
         background_tasks.add_task(train_with_error_handling)
