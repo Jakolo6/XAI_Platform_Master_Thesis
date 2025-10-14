@@ -18,7 +18,7 @@ class BenchmarkResponse(BaseModel):
     """Benchmark response schema."""
     dataset_id: str
     dataset_name: str
-    models: Dict[str, Dict[str, Any]]
+    models: List[Dict[str, Any]]  # Changed from Dict to List to show all models
 
 
 @router.get("/", response_model=List[BenchmarkResponse])
@@ -57,30 +57,32 @@ async def get_benchmarks(
             # Get models for this dataset
             dataset_models = [m for m in enriched_models if m.get('dataset_id') == dataset_id]
             
-            # Group by model type
-            models_by_type = {}
+            # Build list of all models (not grouped, show all)
+            models_list = []
             for model in dataset_models:
-                model_type = model['model_type']
-                
-                if model_type not in models_by_type:
-                    # Metrics are now enriched from model_metrics table
-                    models_by_type[model_type] = {
-                        'model_id': model['id'],
-                        'auc_roc': model.get('auc_roc'),
-                        'auc_pr': model.get('auc_pr'),
-                        'f1_score': model.get('f1_score'),
-                        'precision': model.get('precision'),
-                        'recall': model.get('recall'),
-                        'accuracy': model.get('accuracy'),
-                        'training_time_seconds': model.get('training_time_seconds'),
-                        'model_size_mb': model.get('model_size_mb'),
-                        'status': model.get('status')
-                    }
+                models_list.append({
+                    'model_id': model['id'],
+                    'model_name': model.get('name', f"{model['model_type']} Model"),
+                    'model_type': model['model_type'],
+                    'auc_roc': model.get('auc_roc'),
+                    'auc_pr': model.get('auc_pr'),
+                    'f1_score': model.get('f1_score'),
+                    'precision': model.get('precision'),
+                    'recall': model.get('recall'),
+                    'accuracy': model.get('accuracy'),
+                    'training_time_seconds': model.get('training_time_seconds'),
+                    'model_size_mb': model.get('model_size_mb'),
+                    'status': model.get('status'),
+                    'created_at': model.get('created_at')
+                })
+            
+            # Sort by creation date (newest first)
+            models_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
             
             benchmarks.append(BenchmarkResponse(
                 dataset_id=dataset_name,
                 dataset_name=dataset.get('display_name', dataset_name),
-                models=models_by_type
+                models=models_list
             ))
         
         logger.info("Benchmarks retrieved", count=len(benchmarks))

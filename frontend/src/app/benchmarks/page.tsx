@@ -7,16 +7,25 @@ import Link from 'next/link';
 import { BarChart3, TrendingUp, Award, Clock, ExternalLink } from 'lucide-react';
 import { benchmarksAPI } from '@/lib/api';
 
+interface ModelData {
+  model_id: string;
+  model_name: string;
+  model_type: string;
+  auc_roc: number;
+  f1_score: number;
+  accuracy: number;
+  precision: number;
+  recall: number;
+  training_time_seconds: number;
+  model_size_mb: number;
+  status: string;
+  created_at: string;
+}
+
 interface BenchmarkData {
   dataset_id: string;
   dataset_name: string;
-  models: Record<string, {
-    model_id: string;
-    auc_roc: number;
-    f1_score: number;
-    training_time_seconds: number;
-    model_size_mb: number;
-  }>;
+  models: ModelData[];  // Changed from Record to Array
 }
 
 export default function BenchmarksPage() {
@@ -50,10 +59,10 @@ export default function BenchmarksPage() {
 
   const getBestModel = (dataset: BenchmarkData) => {
     let best = { model: '', score: 0 };
-    Object.entries(dataset.models).forEach(([modelType, metrics]) => {
-      const score = getMetricValue(metrics, selectedMetric);
+    dataset.models.forEach((model) => {
+      const score = getMetricValue(model, selectedMetric);
       if (score > best.score) {
-        best = { model: modelType, score };
+        best = { model: model.model_name || model.model_type, score };
       }
     });
     return best;
@@ -129,7 +138,7 @@ export default function BenchmarksPage() {
               <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900">
-              {benchmarks.reduce((sum, b) => sum + Object.keys(b.models).length, 0)}
+              {benchmarks.reduce((sum, b) => sum + b.models.length, 0)}
             </div>
           </div>
 
@@ -182,28 +191,34 @@ export default function BenchmarksPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {Object.entries(benchmark.models)
-                      .sort((a, b) => getMetricValue(b[1], selectedMetric) - getMetricValue(a[1], selectedMetric))
-                      .map(([modelType, metrics]) => {
-                        const isBest = modelType === best.model;
+                    {benchmark.models
+                      .sort((a, b) => getMetricValue(b, selectedMetric) - getMetricValue(a, selectedMetric))
+                      .map((model) => {
+                        const modelName = model.model_name || model.model_type;
+                        const isBest = modelName === best.model;
                         
                         return (
                           <tr 
-                            key={modelType}
+                            key={model.model_id}
                             className={`${isBest ? 'bg-yellow-50' : 'hover:bg-gray-50'} cursor-pointer transition-colors`}
-                            onClick={() => metrics.model_id && (window.location.href = `/models/${metrics.model_id}`)}
+                            onClick={() => model.model_id && (window.location.href = `/models/${model.model_id}`)}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {modelType}
+                                <div className="flex flex-col">
+                                  <div className="flex items-center">
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {modelName}
+                                    </span>
+                                    {isBest && (
+                                      <Award className="h-4 w-4 text-yellow-600 ml-2" />
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {model.model_type}
                                   </span>
-                                  {isBest && (
-                                    <Award className="h-4 w-4 text-yellow-600 ml-2" />
-                                  )}
                                 </div>
-                                {metrics.model_id && (
+                                {model.model_id && (
                                   <ExternalLink className="h-4 w-4 text-gray-400" />
                                 )}
                               </div>
@@ -212,28 +227,30 @@ export default function BenchmarksPage() {
                               <span className={`text-sm ${
                                 selectedMetric === 'auc_roc' ? 'font-bold text-blue-600' : 'text-gray-900'
                               }`}>
-                                {metrics.auc_roc?.toFixed(4) || 'N/A'}
+                                {model.auc_roc?.toFixed(4) || 'N/A'}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`text-sm ${
                                 selectedMetric === 'f1_score' ? 'font-bold text-blue-600' : 'text-gray-900'
                               }`}>
-                                {metrics.f1_score?.toFixed(4) || 'N/A'}
+                                {model.f1_score?.toFixed(4) || 'N/A'}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center text-sm text-gray-900">
                                 <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                                {metrics.training_time_seconds?.toFixed(2)}s
+                                {model.training_time_seconds?.toFixed(2)}s
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {metrics.model_size_mb?.toFixed(2)} MB
+                              {model.model_size_mb?.toFixed(2)} MB
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Completed
+                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                model.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {model.status || 'Completed'}
                               </span>
                             </td>
                           </tr>
