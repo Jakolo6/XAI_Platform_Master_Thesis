@@ -1,12 +1,14 @@
 """
 Pydantic schemas for Explainability Sandbox
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 class SampleInstance(BaseModel):
     """A test sample with model prediction"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     instance_id: str
     features: Dict[str, Any]
     prediction: float
@@ -29,6 +31,8 @@ class ExplanationData(BaseModel):
 
 class WhatIfRequest(BaseModel):
     """Request for what-if analysis"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     instance_id: str
     feature: str
@@ -44,6 +48,8 @@ class WhatIfResponse(BaseModel):
 
 class InterpretabilityRating(BaseModel):
     """Human interpretability rating"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     instance_id: str
     clarity: int = Field(..., ge=1, le=5, description="How clear and understandable (1-5)")

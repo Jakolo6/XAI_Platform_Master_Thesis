@@ -4,7 +4,7 @@ Model training endpoints - simplified without Celery.
 
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import structlog
 
 from app.api.dependencies import get_current_researcher
@@ -18,6 +18,8 @@ router = APIRouter()
 
 class ModelTrainRequest(BaseModel):
     """Model training request schema."""
+    model_config = ConfigDict(protected_namespaces=())
+    
     dataset_id: str
     model_type: str  # 'xgboost', 'random_forest', etc.
     hyperparameters: Optional[Dict[str, Any]] = None

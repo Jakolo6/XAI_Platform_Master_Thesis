@@ -4,7 +4,7 @@ XAI explanation generation endpoints.
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from typing import Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import structlog
 
 from app.api.dependencies import get_current_researcher
@@ -19,6 +19,8 @@ logger = structlog.get_logger()
 
 class ExplanationRequest(BaseModel):
     """Request schema for generating explanations."""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     method: str = "shap"  # 'shap' or 'lime'
     sample_size: int = 100
@@ -26,6 +28,8 @@ class ExplanationRequest(BaseModel):
 
 class LocalExplanationRequest(BaseModel):
     """Request schema for local (instance-level) explanations."""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     sample_index: int  # Index of the sample in test set
     method: str = "shap"

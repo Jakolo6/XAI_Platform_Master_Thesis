@@ -6,7 +6,7 @@ Provides both LLM-driven and rule-based interpretation of SHAP values.
 
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any, Optional, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import structlog
 
 from app.api.dependencies import get_current_researcher
@@ -19,6 +19,8 @@ logger = structlog.get_logger()
 
 class InterpretationRequest(BaseModel):
     """Request schema for generating interpretations."""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     shap_data: Dict[str, Any]
     mode: Literal["llm", "rule-based"] = "rule-based"
@@ -26,6 +28,8 @@ class InterpretationRequest(BaseModel):
 
 class InterpretationFeedback(BaseModel):
     """Feedback schema for interpretation quality."""
+    model_config = ConfigDict(protected_namespaces=())
+    
     interpretation_id: str
     model_id: str
     mode: str

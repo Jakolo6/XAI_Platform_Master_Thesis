@@ -75,7 +75,17 @@ class MetricsService(ModelServiceBase):
             metrics['f1_score'] = float(f1_score(y_true, y_pred, average='binary', zero_division=0))
             
             # Confusion matrix
-            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+            cm = confusion_matrix(y_true, y_pred)
+            # Ensure a 2×2 matrix; pad missing rows/columns with zeros
+            if cm.shape != (2, 2):
+                # Create a full 2×2 matrix filled with zeros and assign known values
+                full_cm = np.zeros((2, 2), dtype=int)
+                # Map existing counts into the appropriate positions (assumes binary labels 0 and 1)
+                for i in range(cm.shape[0]):
+                    for j in range(cm.shape[1]):
+                        full_cm[i, j] = cm[i, j]
+                cm = full_cm
+            tn, fp, fn, tp = cm.ravel()
             metrics['confusion_matrix'] = {
                 'tn': int(tn),
                 'fp': int(fp),
@@ -164,13 +174,21 @@ class MetricsService(ModelServiceBase):
             # Avoid division by zero
             nonzero = bin_total != 0
             
+            # Guard against empty samples
+            total_samples = np.sum(bin_total)
+            if total_samples == 0:
+                return {
+                    'expected_calibration_error': 0.0,
+                    'maximum_calibration_error': 0.0
+                }
+            
             # Expected Calibration Error (ECE)
             bin_acc = np.zeros(n_bins)
             bin_conf = np.zeros(n_bins)
             bin_acc[nonzero] = bin_true[nonzero] / bin_total[nonzero]
             bin_conf[nonzero] = bin_sums[nonzero] / bin_total[nonzero]
             
-            ece = np.sum(bin_total[nonzero] * np.abs(bin_acc[nonzero] - bin_conf[nonzero])) / np.sum(bin_total)
+            ece = np.sum(bin_total[nonzero] * np.abs(bin_acc[nonzero] - bin_conf[nonzero])) / total_samples
             
             # Maximum Calibration Error (MCE)
             mce = np.max(np.abs(bin_acc[nonzero] - bin_conf[nonzero])) if np.any(nonzero) else 0.0

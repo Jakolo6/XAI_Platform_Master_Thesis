@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 import uuid
 import random
@@ -38,6 +38,8 @@ router = APIRouter()
 
 class StudyQuestionResponse(BaseModel):
     """Response model for a study question"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     question_id: str
     model_id: str
     dataset_id: Optional[str]
@@ -51,6 +53,8 @@ class StudyQuestionResponse(BaseModel):
 
 class EvaluationRequest(BaseModel):
     """Request model for submitting an evaluation"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     question_id: str
     session_id: str
     model_id: str
@@ -78,6 +82,8 @@ class SessionResponse(BaseModel):
 
 class AggregatedResults(BaseModel):
     """Aggregated results for researchers"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: str
     method: str
     num_evaluations: int
