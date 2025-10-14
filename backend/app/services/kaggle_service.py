@@ -60,7 +60,7 @@ class KaggleService:
             # Upload to R2 for persistent storage
             if r2_service.is_configured():
                 logger.info("Uploading dataset files to R2 for persistent storage")
-                r2_service.upload_directory(self.DATA_DIR, "home-credit/raw")
+                r2_service.upload_directory(self.DATA_DIR, "datasets/home-credit-default-risk/raw")
                 logger.info("Dataset uploaded to R2")
             else:
                 logger.warning("R2 not configured, files will be ephemeral")
@@ -87,9 +87,9 @@ class KaggleService:
             if not train_path.exists():
                 logger.info("File not found locally, checking R2...")
                 
-                if r2_service.is_configured() and r2_service.file_exists("home-credit/raw/application_train.csv"):
+                if r2_service.is_configured() and r2_service.file_exists("datasets/home-credit-default-risk/raw/application_train.csv"):
                     logger.info("Downloading dataset from R2")
-                    r2_service.download_directory("home-credit/raw", self.DATA_DIR)
+                    r2_service.download_directory("datasets/home-credit-default-risk/raw", self.DATA_DIR)
                     logger.info("Dataset downloaded from R2")
                 else:
                     raise FileNotFoundError(f"application_train.csv not found. Please download dataset first.")
@@ -169,7 +169,7 @@ class KaggleService:
             # Upload processed files to R2 for persistent storage
             if r2_service.is_configured():
                 logger.info("Uploading processed files to R2")
-                r2_service.upload_directory(self.PROCESSED_DIR, "home-credit/processed")
+                r2_service.upload_directory(self.PROCESSED_DIR, "datasets/home-credit-default-risk/processed")
                 logger.info("Processed files uploaded to R2")
             
             # Generate EDA statistics
