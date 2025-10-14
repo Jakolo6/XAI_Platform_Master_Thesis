@@ -116,38 +116,41 @@ export default function SandboxPage() {
     }
   };
 
-  const loadGlobalExplanations = async () => {
-    console.log('🔵 loadGlobalExplanations called!');
-    console.log('Selected model:', selectedModel);
+  const loadOrGenerateGlobalExplanations = async () => {
+    if (!selectedModel) return;
     
-    if (!selectedModel) {
-      console.log('❌ No model selected, returning early');
-      return;
-    }
-    
-    console.log('✅ Model selected, proceeding...');
     setIsLoading(true);
     setError(null);
     
     try {
       const modelId = selectedModel.id || selectedModel.model_id;
-      console.log('Model ID:', modelId);
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       
-      // Load global SHAP
-      console.log('📡 Fetching global explanations...');
-      const shapResponse = await explanationsAPI.getGlobalExplanations(modelId);
-      console.log('Global explanations response:', shapResponse.data);
-      console.log('SHAP data:', shapResponse.data.shap);
-      console.log('LIME data:', shapResponse.data.lime);
+      // Try to load existing explanations
+      const response = await explanationsAPI.getGlobalExplanations(modelId);
       
-      setShapGlobal(shapResponse.data.shap);
-      
-      // Load global LIME  
-      setLimeGlobal(shapResponse.data.lime);
+      if (response.data.shap || response.data.lime) {
+        // Data exists, load it
+        setShapGlobal(response.data.shap);
+        setLimeGlobal(response.data.lime);
+      } else {
+        // No data exists, generate it
+        await fetch(`${apiBaseUrl}/explanations/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model_id: modelId,
+            method: 'shap',
+            sample_size: 1000
+          })
+        });
+        
+        setError('Global explanation generation started! This takes 3-5 minutes. Please wait and click the button again to load results.');
+      }
       
     } catch (error: any) {
-      console.error('Failed to load global explanations:', error);
-      setError(error.response?.data?.detail || 'Failed to load global explanations. Please ensure they have been generated.');
+      console.error('Failed to load/generate global explanations:', error);
+      setError(error.response?.data?.detail || 'Failed to load global explanations.');
     } finally {
       setIsLoading(false);
     }
@@ -412,11 +415,10 @@ export default function SandboxPage() {
           
           <button
             onClick={() => {
-              console.log('🔴 Button clicked! View mode:', viewMode);
               if (viewMode === 'local') {
                 loadSamplePrediction();
               } else {
-                loadGlobalExplanations();
+                loadOrGenerateGlobalExplanations();
               }
             }}
             disabled={!selectedModel || isLoading}
@@ -434,8 +436,8 @@ export default function SandboxPage() {
               </>
             ) : (
               <>
-                <RefreshCw className="w-5 h-5" />
-                Load Global Explanations
+                <Brain className="w-5 h-5" />
+                Show Global SHAP
               </>
             )}
           </button>
@@ -460,42 +462,10 @@ export default function SandboxPage() {
           ) : (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
               <Globe className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Global Explanations Available</h3>
-              <p className="text-gray-600 mb-4">
-                Global explanations haven't been generated for this model yet. Generate them first to view model-level feature importance.
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Global Explanations...</h3>
+              <p className="text-gray-600">
+                Please wait while we fetch or generate the global SHAP explanations for this model.
               </p>
-              <button
-                onClick={async () => {
-                  if (!selectedModel) return;
-                  setIsLoading(true);
-                  try {
-                    const modelId = selectedModel.id || selectedModel.model_id;
-                    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-                    
-                    // Generate SHAP
-                    await fetch(`${apiBaseUrl}/explanations/generate`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        model_id: modelId,
-                        method: 'shap',
-                        sample_size: 1000
-                      })
-                    });
-                    
-                    alert('Global explanation generation started! This may take a few minutes. Refresh to check status.');
-                  } catch (error) {
-                    console.error('Failed to generate explanations:', error);
-                    alert('Failed to start explanation generation');
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-                disabled={!selectedModel || isLoading}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
-              >
-                Generate Global Explanations
-              </button>
             </div>
           )
         ) : viewMode === 'local' && selectedInstance && shapExplanation ? (
