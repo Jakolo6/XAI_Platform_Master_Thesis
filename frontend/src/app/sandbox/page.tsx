@@ -30,9 +30,12 @@ import {
   XCircle,
   Info,
   BarChart3,
-  GitCompare
+  GitCompare,
+  Globe,
+  Target
 } from 'lucide-react';
 import { explanationsAPI, modelsAPI } from '@/lib/api';
+import GlobalExplanationView from './global-view';
 
 // Types
 interface PredictionInstance {
@@ -67,11 +70,14 @@ interface FeatureComparison {
 
 export default function SandboxPage() {
   // State
+  const [viewMode, setViewMode] = useState<'local' | 'global'>('local');
   const [selectedModel, setSelectedModel] = useState<any>(null);
   const [models, setModels] = useState<any[]>([]);
   const [selectedInstance, setSelectedInstance] = useState<PredictionInstance | null>(null);
   const [shapExplanation, setShapExplanation] = useState<ExplanationData | null>(null);
   const [limeExplanation, setLimeExplanation] = useState<ExplanationData | null>(null);
+  const [shapGlobal, setShapGlobal] = useState<any>(null);
+  const [limeGlobal, setLimeGlobal] = useState<any>(null);
   const [interpretation, setInterpretation] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +98,30 @@ export default function SandboxPage() {
     } catch (error) {
       console.error('Failed to load models:', error);
       setError('Failed to load models');
+    }
+  };
+
+  const loadGlobalExplanations = async () => {
+    if (!selectedModel) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const modelId = selectedModel.id || selectedModel.model_id;
+      
+      // Load global SHAP
+      const shapResponse = await explanationsAPI.getGlobalExplanations(modelId);
+      setShapGlobal(shapResponse.data.shap);
+      
+      // Load global LIME  
+      setLimeGlobal(shapResponse.data.lime);
+      
+    } catch (error: any) {
+      console.error('Failed to load global explanations:', error);
+      setError(error.response?.data?.detail || 'Failed to load global explanations. Please ensure they have been generated.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -225,8 +255,36 @@ export default function SandboxPage() {
               <Brain className="w-8 h-8 text-indigo-600" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Explainability Sandbox</h1>
-                <p className="text-sm text-gray-600">Interactive local explanation explorer</p>
+                <p className="text-sm text-gray-600">
+                  {viewMode === 'local' ? 'Interactive local explanation explorer' : 'Model-level feature importance'}
+                </p>
               </div>
+            </div>
+            
+            {/* View Mode Toggle */}
+            <div className="flex gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('local')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${
+                  viewMode === 'local'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Target className="w-4 h-4" />
+                Local View
+              </button>
+              <button
+                onClick={() => setViewMode('global')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors flex items-center gap-2 ${
+                  viewMode === 'global'
+                    ? 'bg-white text-indigo-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                Global View
+              </button>
             </div>
           </div>
         </div>
@@ -278,7 +336,7 @@ export default function SandboxPage() {
           </div>
           
           <button
-            onClick={loadSamplePrediction}
+            onClick={viewMode === 'local' ? loadSamplePrediction : loadGlobalExplanations}
             disabled={!selectedModel || isLoading}
             className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
           >
@@ -287,10 +345,15 @@ export default function SandboxPage() {
                 <RefreshCw className="w-5 h-5 animate-spin" />
                 Loading...
               </>
-            ) : (
+            ) : viewMode === 'local' ? (
               <>
                 <RefreshCw className="w-5 h-5" />
                 Load Sample Prediction
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                Load Global Explanations
               </>
             )}
           </button>
@@ -303,8 +366,18 @@ export default function SandboxPage() {
           </div>
         )}
 
-        {/* 1️⃣ CUSTOMER SNAPSHOT */}
-        {selectedInstance && shapExplanation && (
+        {/* CONDITIONAL RENDERING: LOCAL vs GLOBAL VIEW */}
+        {viewMode === 'global' && shapGlobal && limeGlobal ? (
+          <GlobalExplanationView
+            modelId={selectedModel?.id || selectedModel?.model_id}
+            modelData={selectedModel}
+            shapGlobal={shapGlobal}
+            limeGlobal={limeGlobal}
+          />
+        ) : viewMode === 'local' && selectedInstance && shapExplanation ? (
+          <>
+            {/* 1️⃣ CUSTOMER SNAPSHOT */}
+            {selectedInstance && shapExplanation && (
           <div className="bg-gradient-to-br from-white to-indigo-50 rounded-xl shadow-lg border border-indigo-200 p-8 mb-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <User className="w-6 h-6 text-indigo-600" />
@@ -624,6 +697,8 @@ export default function SandboxPage() {
             </div>
           </div>
         )}
+          </>
+        ) : null}
       </div>
     </div>
   );
