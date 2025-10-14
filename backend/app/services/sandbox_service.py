@@ -154,7 +154,8 @@ class SandboxService:
                 "features": features_dict,
                 "prediction": float(prediction_proba),
                 "model_output": model_output,
-                "true_label": true_output
+                "true_label": true_output,
+                "note": "Feature values are normalized/scaled for model input"
             }
             
             logger.info("Sample instance created", 
