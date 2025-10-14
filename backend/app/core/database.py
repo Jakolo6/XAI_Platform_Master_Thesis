@@ -1,5 +1,7 @@
 """
 Database configuration and session management.
+NOTE: This platform uses Supabase as the primary database.
+SQLAlchemy is kept for potential future use but not actively used.
 """
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -11,81 +13,41 @@ from app.core.config import settings
 
 logger = structlog.get_logger()
 
-# Create async engine (optional - we primarily use Supabase)
-try:
-    engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=settings.DEBUG,
-        pool_size=settings.DATABASE_POOL_SIZE,
-        max_overflow=settings.DATABASE_MAX_OVERFLOW,
-        pool_pre_ping=True,
-        poolclass=NullPool if settings.ENVIRONMENT == "test" else None,
-    )
-    logger.info("PostgreSQL engine created")
-except Exception as e:
-    logger.warning("PostgreSQL engine creation failed, using Supabase only", error=str(e))
-    engine = None
+# SQLAlchemy engine - NOT USED (we use Supabase)
+# Kept for backwards compatibility only
+engine = None
+AsyncSessionLocal = None
 
-# Create async session factory (only if engine exists)
-if engine:
-    AsyncSessionLocal = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autocommit=False,
-        autoflush=False,
-    )
-else:
-    AsyncSessionLocal = None
-
-# Create declarative base
+# Create declarative base (for potential future use)
 Base = declarative_base()
+
+logger.info("Database module loaded (using Supabase for all operations)")
 
 
 async def get_db() -> AsyncSession:
     """
     Dependency for getting async database sessions.
+    NOTE: Not used - all database operations go through Supabase DAL.
     
     Yields:
         AsyncSession: Database session
     """
-    if not AsyncSessionLocal:
-        raise RuntimeError("Database not available. Using Supabase instead.")
-    
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception as e:
-            await session.rollback()
-            logger.error("Database session error", exc_info=e)
-            raise
-        finally:
-            await session.close()
+    raise RuntimeError("SQLAlchemy sessions not available. Use Supabase DAL instead.")
 
 
 async def init_db():
-    """Initialize database tables."""
-    if not engine:
-        logger.info("Skipping PostgreSQL initialization (using Supabase)")
-        return
-    
-    try:
-        async with engine.begin() as conn:
-            # Import all models to ensure they're registered
-            from app.models import dataset, model, explanation, user, study
-            
-            # Create all tables
-            await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables created")
-    except Exception as e:
-        logger.warning("Database table creation failed", error=str(e))
+    """
+    Initialize database tables.
+    NOTE: Not used - Supabase schema is managed via SQL migrations.
+    """
+    logger.info("✅ Database initialization skipped (using Supabase)")
+    logger.info("   All tables managed via Supabase SQL migrations")
+    logger.info("   See: backend/migrations/FINAL_supabase_schema.sql")
 
 
 async def close_db():
-    """Close database connections."""
-    if engine:
-        await engine.dispose()
-        logger.info("Database connections closed")
-    else:
-        logger.info("No database connections to close")
+    """
+    Close database connections.
+    NOTE: Not used - Supabase connections managed by supabase-py client.
+    """
+    logger.info("✅ Database cleanup skipped (using Supabase)")
