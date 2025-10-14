@@ -27,6 +27,16 @@ class InterpretationRequest(BaseModel):
     mode: Literal["llm", "rule-based"] = "rule-based"
 
 
+class LocalInterpretationRequest(BaseModel):
+    """Request schema for local interpretation generation."""
+    model_config = ConfigDict(protected_namespaces=())
+    
+    model_id: str
+    instance_id: str
+    shap_data: Dict[str, Any]
+    mode: Literal["llm", "rule-based", "both"] = "both"
+
+
 class InterpretationFeedback(BaseModel):
     """Feedback schema for interpretation quality."""
     model_config = ConfigDict(protected_namespaces=())
@@ -103,10 +113,7 @@ async def generate_interpretation(
 
 @router.post("/local")
 async def generate_local_interpretation(
-    model_id: str,
-    instance_id: str,
-    shap_data: Dict[str, Any],
-    mode: Literal["llm", "rule-based", "both"] = "both",
+    request: LocalInterpretationRequest,
     current_user: str = Depends(get_current_researcher)
 ):
     """
@@ -118,10 +125,7 @@ async def generate_local_interpretation(
     - Both: Side-by-side comparison
     
     Args:
-        model_id: Model identifier
-        instance_id: Sample instance identifier
-        shap_data: SHAP explanation data
-        mode: Interpretation mode ("llm", "rule-based", or "both")
+        request: Local interpretation request with model_id, instance_id, SHAP data, and mode
         current_user: Authenticated user
         
     Returns:
@@ -129,12 +133,12 @@ async def generate_local_interpretation(
     """
     try:
         # Strip _metrics suffix if present
-        base_model_id = model_id.replace('_metrics', '')
+        base_model_id = request.model_id.replace('_metrics', '')
         
         # Get model context via DAL
         model = dal.get_model(base_model_id, include_metrics=False)
         if not model:
-            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+            raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
         
         model_context = {
             "model_type": model.get("model_type"),
@@ -143,20 +147,20 @@ async def generate_local_interpretation(
         }
         
         logger.info("Generating local interpretation",
-                   model_id=model_id,
-                   instance_id=instance_id,
-                   mode=mode)
+                   model_id=request.model_id,
+                   instance_id=request.instance_id,
+                   mode=request.mode)
         
-        if mode == "both":
+        if request.mode == "both":
             # Generate both interpretations
             llm_result = interpretation_service.generate_interpretation(
-                shap_data=shap_data,
+                shap_data=request.shap_data,
                 mode="llm",
                 model_context=model_context
             )
             
             rule_based_result = interpretation_service.generate_interpretation(
-                shap_data=shap_data,
+                shap_data=request.shap_data,
                 mode="rule-based",
                 model_context=model_context
             )
@@ -166,31 +170,31 @@ async def generate_local_interpretation(
                 "rule_based": rule_based_result,
                 "metadata": {
                     "model_id": base_model_id,
-                    "instance_id": instance_id,
+                    "instance_id": request.instance_id,
                     "model_context": model_context
                 }
             }
         else:
             # Generate single interpretation
             result = interpretation_service.generate_interpretation(
-                shap_data=shap_data,
-                mode=mode,
+                shap_data=request.shap_data,
+                mode=request.mode,
                 model_context=model_context
             )
             
             return {
-                mode.replace("-", "_"): result,
+                request.mode.replace("-", "_"): result,
                 "metadata": {
                     "model_id": base_model_id,
-                    "instance_id": instance_id,
+                    "instance_id": request.instance_id,
                     "model_context": model_context
                 }
             }
         
     except Exception as e:
         logger.error("Failed to generate local interpretation",
-                    model_id=model_id,
-                    instance_id=instance_id,
+                    model_id=request.model_id,
+                    instance_id=request.instance_id,
                     error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
