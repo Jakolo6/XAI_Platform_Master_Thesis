@@ -118,6 +118,7 @@ CREATE TABLE explanations (
     dataset_id VARCHAR(255) REFERENCES datasets(id) ON DELETE CASCADE,
     method VARCHAR(50) NOT NULL,
     explanation_type VARCHAR(50) DEFAULT 'global',
+    explanation_data JSONB,
     summary_json JSONB,
     top_features JSONB,
     feature_importance JSONB,
