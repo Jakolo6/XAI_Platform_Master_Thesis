@@ -112,7 +112,7 @@ class ExplanationService:
                     'model_id': model_id,
                     'method': method.lower(),
                     'status': 'completed',
-                    'sample_size': len(X_test),
+                    'num_samples': len(X_test),
                     'feature_importance': explanation_data.get('feature_importance'),
                     'explanation_data': explanation_data,
                     'completed_at': pd.Timestamp.now().isoformat()

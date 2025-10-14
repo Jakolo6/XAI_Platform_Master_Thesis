@@ -10,6 +10,11 @@ ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 ALTER TABLE explanations 
 ADD COLUMN IF NOT EXISTS explanation_data JSONB;
 
+-- Add num_samples column if it doesn't exist
+ALTER TABLE explanations 
+ADD COLUMN IF NOT EXISTS num_samples INTEGER;
+
 -- Add comments
 COMMENT ON COLUMN explanations.completed_at IS 'Timestamp when the explanation generation was completed';
 COMMENT ON COLUMN explanations.explanation_data IS 'Raw explanation data (SHAP values, LIME weights, etc.)';
+COMMENT ON COLUMN explanations.num_samples IS 'Number of samples used for explanation generation';
