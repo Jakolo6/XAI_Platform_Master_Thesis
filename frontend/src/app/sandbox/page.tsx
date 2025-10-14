@@ -107,7 +107,8 @@ export default function ExplainableAI() {
     try {
       if (viewMode === 'local') {
         // Load a sample prediction instance for local view
-        const response = await explanationsAPI.getSampleInstance(selectedModel.model_id);
+        const modelId = selectedModel.id || selectedModel.model_id;
+        const response = await explanationsAPI.getSampleInstance(modelId);
         setSelectedInstance(response.data);
         
         // Load local explanations for this instance
@@ -128,10 +129,11 @@ export default function ExplainableAI() {
     if (!selectedModel) return;
     
     try {
+      const modelId = selectedModel.id || selectedModel.model_id;
       // Load both SHAP and LIME local explanations
       const [shapResponse, limeResponse] = await Promise.all([
-        explanationsAPI.getLocalExplanation(selectedModel.model_id, instanceId, 'shap'),
-        explanationsAPI.getLocalExplanation(selectedModel.model_id, instanceId, 'lime')
+        explanationsAPI.getLocalExplanation(modelId, instanceId, 'shap'),
+        explanationsAPI.getLocalExplanation(modelId, instanceId, 'lime')
       ]);
       
       setShapExplanation(shapResponse.data);
@@ -149,8 +151,9 @@ export default function ExplainableAI() {
     if (!selectedModel) return;
     
     try {
+      const modelId = selectedModel.id || selectedModel.model_id;
       // Load global explanations using the new endpoint
-      const response = await explanationsAPI.getGlobalExplanations(selectedModel.model_id);
+      const response = await explanationsAPI.getGlobalExplanations(modelId);
       const { shap, lime, has_shap, has_lime } = response.data;
       
       if (!has_shap && !has_lime) {
@@ -288,9 +291,10 @@ export default function ExplainableAI() {
     if (!selectedModel || !selectedInstance) return;
     
     try {
+      const modelId = selectedModel.id || selectedModel.model_id;
       // Call what-if analysis endpoint
       const response = await explanationsAPI.whatIfAnalysis(
-        selectedModel.model_id,
+        modelId,
         selectedInstance.instance_id,
         feature,
         newValue
@@ -309,8 +313,9 @@ export default function ExplainableAI() {
     if (!selectedModel || !selectedInstance) return;
     
     try {
+      const modelId = selectedModel.id || selectedModel.model_id;
       await explanationsAPI.submitInterpretabilityRating({
-        model_id: selectedModel.model_id,
+        model_id: modelId,
         instance_id: selectedInstance.instance_id,
         clarity,
         trustworthiness,
@@ -401,14 +406,14 @@ export default function ExplainableAI() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    onClick={() => window.location.href = `/models/${selectedModel?.id || selectedModel?.model_id}`}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center space-x-2"
                   >
                     <span>Go to Model Page</span>
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <a
-                    href={`/models/${selectedModel?.model_id}`}
+                    href={`/models/${selectedModel?.id || selectedModel?.model_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 text-sm font-medium"
@@ -446,9 +451,9 @@ export default function ExplainableAI() {
                 Select Model
               </label>
               <select
-                value={selectedModel?.model_id || ''}
+                value={selectedModel?.id || selectedModel?.model_id || ''}
                 onChange={(e) => {
-                  const model = models.find(m => m.model_id === e.target.value);
+                  const model = models.find(m => (m.id || m.model_id) === e.target.value);
                   setSelectedModel(model);
                   setSelectedInstance(null);
                   setShapExplanation(null);
@@ -458,7 +463,7 @@ export default function ExplainableAI() {
               >
                 <option value="">Choose a model...</option>
                 {models.map(model => (
-                  <option key={model.model_id} value={model.model_id}>
+                  <option key={model.id || model.model_id} value={model.id || model.model_id}>
                     {model.name} - {model.model_type}
                   </option>
                 ))}
@@ -576,7 +581,7 @@ export default function ExplainableAI() {
                     Generate LIME explanation to compare both methods
                   </p>
                   <button
-                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    onClick={() => window.location.href = `/models/${selectedModel?.id || selectedModel?.model_id}`}
                     className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm"
                   >
                     Generate LIME
@@ -585,14 +590,13 @@ export default function ExplainableAI() {
               )}
               
               {!shapExplanation && limeExplanation && (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center justify-center text-center">
-                  <AlertCircle className="h-12 w-12 text-gray-400 mb-3" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">SHAP Not Available</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>No SHAP Explanation:</strong><br />
                     Generate SHAP explanation to compare both methods
                   </p>
                   <button
-                    onClick={() => window.location.href = `/models/${selectedModel?.model_id}`}
+                    onClick={() => window.location.href = `/models/${selectedModel?.id || selectedModel?.model_id}`}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
                   >
                     Generate SHAP
