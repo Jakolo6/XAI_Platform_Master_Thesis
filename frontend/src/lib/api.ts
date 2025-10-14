@@ -91,6 +91,8 @@ export const modelsAPI = {
     optimize?: boolean;
     hyperparameters?: Record<string, any>;
   }) => api.post('/models/train', data),
+  
+  delete: (id: string) => api.delete(`/models/${id}`),
 };
 
 export const datasetsAPI = {

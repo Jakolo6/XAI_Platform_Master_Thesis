@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BarChart3, TrendingUp, Award, Clock, ExternalLink } from 'lucide-react';
-import { benchmarksAPI } from '@/lib/api';
+import { BarChart3, TrendingUp, Award, Clock, ExternalLink, Trash2 } from 'lucide-react';
+import { benchmarksAPI, modelsAPI } from '@/lib/api';
 
 interface ModelData {
   id?: string;  // New models use 'id'
@@ -33,6 +33,7 @@ export default function BenchmarksPage() {
   const [benchmarks, setBenchmarks] = useState<BenchmarkData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMetric, setSelectedMetric] = useState<'auc_roc' | 'f1_score'>('auc_roc');
+  const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBenchmarks();
@@ -67,6 +68,30 @@ export default function BenchmarksPage() {
       }
     });
     return best;
+  };
+
+  const handleDeleteModel = async (modelId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click navigation
+    
+    if (!confirm('Are you sure you want to delete this model? This action cannot be undone.')) {
+      return;
+    }
+    
+    setDeletingModelId(modelId);
+    
+    try {
+      await modelsAPI.delete(modelId);
+      
+      // Refresh benchmarks after deletion
+      await fetchBenchmarks();
+      
+      alert('Model deleted successfully!');
+    } catch (error: any) {
+      console.error('Failed to delete model:', error);
+      alert(error.response?.data?.detail || 'Failed to delete model');
+    } finally {
+      setDeletingModelId(null);
+    }
   };
 
   if (loading) {
@@ -189,6 +214,9 @@ export default function BenchmarksPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -253,6 +281,20 @@ export default function BenchmarksPage() {
                               }`}>
                                 {model.status || 'Completed'}
                               </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                onClick={(e) => handleDeleteModel(model.model_id || model.id || '', e)}
+                                disabled={deletingModelId === (model.model_id || model.id)}
+                                className="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Delete model"
+                              >
+                                {deletingModelId === (model.model_id || model.id) ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
                             </td>
                           </tr>
                         );
