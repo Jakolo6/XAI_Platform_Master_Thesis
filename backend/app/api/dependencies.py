@@ -1,15 +1,14 @@
 """
 API dependencies for authentication and authorization.
+NOTE: Using Supabase Auth, not custom SQLAlchemy auth.
 """
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 import structlog
 from typing import Optional
 
-from app.core.database import get_db
+# from app.core.database import get_db  # Not used - Supabase only
 from app.core.security import decode_token
 from app.core.config import settings
 from app.models.user import User, UserRole
@@ -19,8 +18,7 @@ security = HTTPBearer(auto_error=False)  # Don't auto-error, we'll handle it
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    db: AsyncSession = Depends(get_db)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> User:
     """
     Get current authenticated user from JWT token.
@@ -72,37 +70,31 @@ async def get_current_user(
             detail="Invalid token payload"
         )
     
-    try:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found"
-            )
-        
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is inactive"
-            )
-        
-        return user
-    except Exception as e:
-        # If database query fails (no PostgreSQL), use development bypass
-        if settings.ENVIRONMENT == "development":
-            logger.warning("Database query failed, using development bypass", error=str(e))
-            mock_user = User(
-                id="dev-user-123",
-                email="dev@example.com",
-                full_name="Development User",
-                role=UserRole.RESEARCHER,
-                is_active=True,
-                hashed_password=""
-            )
-            return mock_user
-        raise
+    # NOTE: Using Supabase Auth - no database lookup needed
+    # In development, return mock user
+    if settings.ENVIRONMENT == "development":
+        logger.info("Development mode - returning mock user", user_id=user_id)
+        mock_user = User(
+            id=user_id,
+            email="dev@example.com",
+            full_name="Development User",
+            role=UserRole.RESEARCHER,
+            is_active=True,
+            hashed_password=""
+        )
+        return mock_user
+    
+    # In production, trust the JWT token from Supabase
+    # Create a user object from the token payload
+    mock_user = User(
+        id=user_id,
+        email=payload.get("email", "user@example.com"),
+        full_name=payload.get("name", "User"),
+        role=UserRole.RESEARCHER,
+        is_active=True,
+        hashed_password=""
+    )
+    return mock_user
 
 
 async def get_current_researcher(
