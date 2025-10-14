@@ -93,14 +93,24 @@ class ModelTrainingService:
             
             try:
                 # 3. Download processed data from R2
-                logger.info("Downloading processed data from R2", dataset_id=dataset_id)
+                logger.info("Downloading processed data from R2", dataset_id=dataset_id, file_path=file_path)
                 train_path = temp_dir / "train.parquet"
                 val_path = temp_dir / "val.parquet"
                 test_path = temp_dir / "test.parquet"
                 
-                r2_service.download_file(f"{file_path}/train.parquet", train_path)
-                r2_service.download_file(f"{file_path}/val.parquet", val_path)
-                r2_service.download_file(f"{file_path}/test.parquet", test_path)
+                # Download and verify each file
+                train_key = f"{file_path}/train.parquet"
+                val_key = f"{file_path}/val.parquet"
+                test_key = f"{file_path}/test.parquet"
+                
+                if not r2_service.download_file(train_key, train_path):
+                    raise RuntimeError(f"Failed to download training data from R2: {train_key}")
+                if not r2_service.download_file(val_key, val_path):
+                    raise RuntimeError(f"Failed to download validation data from R2: {val_key}")
+                if not r2_service.download_file(test_key, test_path):
+                    raise RuntimeError(f"Failed to download test data from R2: {test_key}")
+                
+                logger.info("All data files downloaded successfully")
                 
                 # 4. Load data
                 logger.info("Loading training data", dataset_id=dataset_id)

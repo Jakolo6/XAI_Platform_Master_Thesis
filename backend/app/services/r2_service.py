@@ -81,13 +81,25 @@ class R2Service:
         """Download a file from R2"""
         if not self.is_configured():
             logger.warning("R2 not configured, skipping download")
+            print(f"❌ R2 NOT CONFIGURED - Cannot download {r2_key}", flush=True)
             return False
         
         try:
             logger.info("Downloading from R2", r2_key=r2_key, local_path=str(local_path))
+            print(f"📥 Downloading from R2: {r2_key} -> {local_path}", flush=True)
             
             # Create parent directory if needed
             local_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Check if file exists first
+            try:
+                self.client.head_object(Bucket=self.bucket_name, Key=r2_key)
+            except Exception as e:
+                logger.error("File not found in R2", r2_key=r2_key, error=str(e))
+                print(f"❌ FILE NOT FOUND IN R2: {r2_key}", flush=True)
+                print(f"   Bucket: {self.bucket_name}", flush=True)
+                print(f"   Error: {str(e)}", flush=True)
+                return False
             
             self.client.download_file(
                 Bucket=self.bucket_name,
@@ -96,10 +108,13 @@ class R2Service:
             )
             
             logger.info("Download successful", r2_key=r2_key)
+            print(f"✅ Downloaded successfully: {r2_key}", flush=True)
             return True
             
         except Exception as e:
             logger.error("Download failed", error=str(e), r2_key=r2_key)
+            print(f"❌ R2 DOWNLOAD FAILED: {r2_key}", flush=True)
+            print(f"   Error: {str(e)}", flush=True)
             return False
     
     def upload_directory(self, local_dir: Path, r2_prefix: str) -> bool:
