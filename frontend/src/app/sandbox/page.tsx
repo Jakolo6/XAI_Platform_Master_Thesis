@@ -429,13 +429,23 @@ export default function SandboxPage() {
         )}
 
         {/* CONDITIONAL RENDERING: LOCAL vs GLOBAL VIEW */}
-        {viewMode === 'global' && shapGlobal && limeGlobal ? (
-          <GlobalExplanationView
-            modelId={selectedModel?.id || selectedModel?.model_id}
-            modelData={selectedModel}
-            shapGlobal={shapGlobal}
-            limeGlobal={limeGlobal}
-          />
+        {viewMode === 'global' ? (
+          (shapGlobal || limeGlobal) ? (
+            <GlobalExplanationView
+              modelId={selectedModel?.id || selectedModel?.model_id}
+              modelData={selectedModel}
+              shapGlobal={shapGlobal}
+              limeGlobal={limeGlobal}
+            />
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
+              <Globe className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Global Explanations Loaded</h3>
+              <p className="text-gray-600 mb-4">
+                Select a model and click "Load Global Explanations" to view model-level feature importance.
+              </p>
+            </div>
+          )
         ) : viewMode === 'local' && selectedInstance && shapExplanation ? (
           <>
             {/* 1️⃣ CUSTOMER SNAPSHOT */}
