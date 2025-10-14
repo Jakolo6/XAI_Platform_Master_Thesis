@@ -26,7 +26,7 @@ async def get_dataset_status():
         logger.info("Checking R2 status", r2_configured=r2_configured)
         
         if r2_configured:
-            files_in_r2 = r2_service.file_exists("home-credit/raw/application_train.csv")
+            files_in_r2 = r2_service.file_exists("datasets/home-credit-default-risk/raw/application_train.csv")
             logger.info("R2 file check result", files_in_r2=files_in_r2)
         else:
             logger.warning("R2 not configured!")
@@ -116,7 +116,7 @@ async def preprocess_home_credit_dataset():
             logger.info("Dataset files not found locally, checking R2...")
             
             # Try to download from R2 first (much faster!)
-            if r2_service.is_configured() and r2_service.file_exists("home-credit/raw/application_train.csv"):
+            if r2_service.is_configured() and r2_service.file_exists("datasets/home-credit-default-risk/raw/application_train.csv"):
                 logger.info("Dataset found in R2, downloading from there (fast!)")
                 # Files will be downloaded by load_and_preprocess when needed
             else:
@@ -135,7 +135,7 @@ async def preprocess_home_credit_dataset():
             "source": "Kaggle",
             "source_identifier": "home-credit-default-risk",
             "status": "completed",
-            "file_path": "home-credit/processed",  # R2 path
+            "file_path": "datasets/home-credit-default-risk/processed",  # R2 path
             "total_rows": result["n_samples"],
             "total_columns": result["n_features"],
             "train_rows": result["train_size"],
