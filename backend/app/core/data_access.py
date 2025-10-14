@@ -162,10 +162,20 @@ class DataAccessLayer:
             return None
             
         except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
             logger.error("Failed to create model", 
                         error=str(e),
+                        error_type=type(e).__name__,
                         model_id=model_data.get('id'),
+                        model_name=model_data.get('name'),
+                        traceback=error_trace,
                         exc_info=True)
+            # Print to stdout for Railway logs
+            print(f"❌ DAL MODEL CREATE FAILED: {str(e)}", flush=True)
+            print(f"Error type: {type(e).__name__}", flush=True)
+            print(f"Model ID: {model_data.get('id')}", flush=True)
+            print(f"Traceback:\n{error_trace}", flush=True)
             return None
     
     def update_model(
