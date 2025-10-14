@@ -14,6 +14,7 @@ function TrainModelContent() {
   const [step, setStep] = useState(1);
   const [selectedDataset, setSelectedDataset] = useState<string>('');
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [modelName, setModelName] = useState<string>('');
   const [hyperparameters, setHyperparameters] = useState<Record<string, any>>({});
   const [training, setTraining] = useState(false);
   const [trainingResult, setTrainingResult] = useState<any>(null);
@@ -83,9 +84,9 @@ function TrainModelContent() {
     try {
       // Real API call to backend
       const response = await modelsAPI.train({
-        name: `${selectedModel}_${selectedDataset}`,
         dataset_id: selectedDataset,
         model_type: selectedModel,
+        model_name: modelName || undefined,  // Send custom name if provided
         hyperparameters: hyperparameters
       });
 
@@ -272,20 +273,40 @@ function TrainModelContent() {
             </div>
           )}
 
-          {/* Step 3: Configure Hyperparameters */}
+          {/* Step 3: Configure Model */}
           {step === 3 && (
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Step 3: Configure Hyperparameters
+                  Step 3: Configure Model
                 </h2>
                 <p className="text-gray-600">
-                  Adjust model parameters or use defaults
+                  Give your model a name and adjust parameters
                 </p>
               </div>
 
-              {/* Hyperparameter Configuration */}
+              {/* Model Configuration */}
               <div className="space-y-6">
+                {/* Model Name Input */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Model Name (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    placeholder={`e.g., "My Best XGBoost Model" or "Fraud Detection v2"`}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-sm text-gray-600 mt-2">
+                    Give your model a memorable name to easily identify it later. If left empty, a default name will be generated.
+                  </p>
+                </div>
+
+                {/* Hyperparameters Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Hyperparameters</h3>
                 {selectedModel === 'xgboost' && (
                   <>
                     <div>
@@ -388,6 +409,7 @@ function TrainModelContent() {
                     Reset to Defaults
                   </button>
                 </div>
+                </div>
               </div>
 
               <div className="mt-8 flex justify-between">
@@ -425,6 +447,12 @@ function TrainModelContent() {
               <div className="bg-gray-50 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-gray-900 mb-4">Training Configuration</h3>
                 <div className="space-y-3">
+                  {modelName && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Model Name:</span>
+                      <span className="font-medium text-blue-600">{modelName}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Dataset:</span>
                     <span className="font-medium text-gray-900">{selectedDataset}</span>

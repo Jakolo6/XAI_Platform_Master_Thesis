@@ -23,6 +23,7 @@ class ModelTrainRequest(BaseModel):
     
     dataset_id: str
     model_type: str  # 'xgboost', 'random_forest', etc.
+    model_name: Optional[str] = None  # Custom name for the model
     hyperparameters: Optional[Dict[str, Any]] = None
 
 
@@ -112,17 +113,20 @@ async def train_model(
             model_service.train_model,
             request.dataset_id,
             request.model_type,
-            request.hyperparameters
+            request.hyperparameters,
+            request.model_name  # Pass custom name
         )
         
         logger.info("Model training queued",
                    dataset_id=request.dataset_id,
-                   model_type=request.model_type)
+                   model_type=request.model_type,
+                   model_name=request.model_name)
         
         return {
             "message": "Model training started",
             "dataset_id": request.dataset_id,
             "model_type": request.model_type,
+            "model_name": request.model_name,
             "status": "training",
             "note": "Training may take 5-10 minutes. Check status with GET /models/"
         }

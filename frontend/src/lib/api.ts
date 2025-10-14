@@ -85,9 +85,9 @@ export const modelsAPI = {
     api.get('/models/leaderboard/comparison', { params: { model_ids: modelIds } }),
   
   train: (data: {
-    name: string;
-    model_type: string;
     dataset_id: string;
+    model_type: string;
+    model_name?: string;  // Optional custom name
     optimize?: boolean;
     hyperparameters?: Record<string, any>;
   }) => api.post('/models/train', data),

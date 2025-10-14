@@ -37,7 +37,8 @@ class ModelTrainingService:
         self,
         dataset_id: str,
         model_type: str,
-        hyperparameters: Dict[str, Any] = None
+        hyperparameters: Dict[str, Any] = None,
+        model_name: str = None
     ) -> Dict[str, Any]:
         """
         Train a model on a processed dataset.
@@ -46,6 +47,7 @@ class ModelTrainingService:
             dataset_id: Dataset identifier
             model_type: Type of model (xgboost, random_forest, etc.)
             hyperparameters: Optional hyperparameters
+            model_name: Optional custom name for the model
             
         Returns:
             Dictionary with training results
@@ -53,8 +55,15 @@ class ModelTrainingService:
         start_time = time.time()
         model_id = f"{dataset_id}_{model_type}_{uuid.uuid4().hex[:8]}"
         
+        # Generate display name
+        if model_name:
+            display_name = model_name
+        else:
+            display_name = f"{model_type.upper()} on {dataset_id}"
+        
         logger.info("Starting model training",
                    model_id=model_id,
+                   model_name=display_name,
                    dataset_id=dataset_id,
                    model_type=model_type)
         
@@ -180,7 +189,7 @@ class ModelTrainingService:
                 # 11. Save model metadata to Supabase
                 model_data = {
                     'id': model_id,
-                    'name': f"{model_type}_{dataset_id}",
+                    'name': display_name,  # Use custom name or auto-generated
                     'model_type': model_type,
                     'version': '1.0',
                     'dataset_id': dataset_id,
