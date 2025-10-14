@@ -283,9 +283,26 @@ class DataAccessLayer:
         """
         try:
             base_model_id = model_id.replace('_metrics', '')
+            
+            # Map metrics to table columns
             metrics_data = {
+                'id': base_model_id,  # Primary key
                 'model_id': base_model_id,
-                **metrics,
+                'auc_roc': metrics.get('auc_roc'),
+                'auc_pr': metrics.get('auc_pr'),
+                'f1_score': metrics.get('f1_score'),
+                'precision': metrics.get('precision'),
+                'recall': metrics.get('recall'),
+                'accuracy': metrics.get('accuracy'),
+                'log_loss': metrics.get('log_loss'),
+                'brier_score': metrics.get('brier_score'),
+                'expected_calibration_error': metrics.get('expected_calibration_error'),
+                'maximum_calibration_error': metrics.get('maximum_calibration_error'),
+                'confusion_matrix': metrics.get('confusion_matrix'),  # JSONB
+                'roc_curve': metrics.get('roc_curve'),  # JSONB
+                'pr_curve': metrics.get('pr_curve'),  # JSONB
+                'class_metrics': metrics.get('class_metrics'),  # JSONB
+                'additional_metrics': metrics.get('additional_metrics'),  # JSONB
                 **self._add_metadata({}, source_module)
             }
             
