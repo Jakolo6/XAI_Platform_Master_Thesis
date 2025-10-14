@@ -200,7 +200,9 @@ export default function SandboxPage() {
     try {
       const modelId = selectedModel.id || selectedModel.model_id;
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/interpretation/local`, {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      
+      const response = await fetch(`${apiBaseUrl}/interpretation/local`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
