@@ -202,21 +202,27 @@ export default function SandboxPage() {
       
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
       
+      const requestBody = {
+        model_id: modelId,
+        instance_id: selectedInstance.instance_id,
+        shap_data: shapExplanation,
+        mode: interpretationMode
+      };
+      
+      console.log('Sending interpretation request:', requestBody);
+      
       const response = await fetch(`${apiBaseUrl}/interpretation/local`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model_id: modelId,
-          instance_id: selectedInstance.instance_id,
-          shap_data: shapExplanation,
-          mode: interpretationMode
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (!response.ok) {
-        throw new Error('Failed to generate interpretations');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Interpretation API error:', errorData);
+        throw new Error(errorData.detail || 'Failed to generate interpretations');
       }
       
       const data = await response.json();
