@@ -136,8 +136,14 @@ async def train_model(
                 )
                 
                 print("=" * 80, flush=True)
-                print("✅ BACKGROUND TRAINING COMPLETED", flush=True)
-                print(f"Result: {result.get('status')}", flush=True)
+                if result.get('status') == 'error':
+                    print("❌ BACKGROUND TRAINING FAILED", flush=True)
+                    print(f"Error: {result.get('error')}", flush=True)
+                    print(f"Traceback:\n{result.get('traceback')}", flush=True)
+                else:
+                    print("✅ BACKGROUND TRAINING COMPLETED", flush=True)
+                    print(f"Model ID: {result.get('model_id')}", flush=True)
+                    print(f"Accuracy: {result.get('metrics', {}).get('accuracy')}", flush=True)
                 print("=" * 80, flush=True)
                 sys.stdout.flush()
                 sys.stderr.flush()
