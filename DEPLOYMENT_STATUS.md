@@ -20,9 +20,24 @@
 
 ---
 
-## ✅ Recent Fixes (October 14, 2025)
+## 🔧 Recent Updates (October 14, 2025)
 
-### 1. Unified Backend Architecture
+### 1. DAL Migration Progress - 60% Complete ✅
+**Commits:** `4085780`, `25010c5`, `fe508d3`, `dc8a402`
+
+**Migrated to DAL:**
+- ✅ `api/v1/endpoints/models.py` - Model listing and retrieval
+- ✅ `services/model_service.py` - Model training and metrics
+- ✅ `services/dataset_service.py` - Dataset processing
+- ✅ `api/v1/endpoints/interpretation.py` - Interpretation generation
+
+**Benefits:**
+- Automatic metrics enrichment
+- Consistent error handling
+- Centralized logging
+- Metadata tracking
+
+### 2. Unified Backend Architecture
 **Commit:** `4085780`
 
 **Changes:**
@@ -45,7 +60,19 @@
 - Metrics computation centralized
 - Automated tests validate data consistency
 
-### 2. Pydantic Namespace Warnings Fixed
+### 3. Custom Model Naming Feature ✅
+**Commit:** `da2dbc9`
+
+**Changes:**
+- ✅ Added optional `model_name` field to training API
+- ✅ Updated frontend with name input in Step 3
+- ✅ Auto-generates default name if not provided
+
+**Impact:**
+- Users can now give models memorable names
+- Easier to identify and manage models
+
+### 4. Pydantic Namespace Warnings Fixed
 **Commit:** `95001f9`
 
 **Changes:**
@@ -63,7 +90,18 @@
 - Clean logs without Pydantic warnings
 - No functional changes, just cleaner output
 
-### 3. Metrics Service Robustness
+### 5. Metrics Display Bug Fixed ✅
+**Commit:** `25010c5`
+
+**Changes:**
+- ✅ Updated models endpoint to use DAL
+- ✅ Automatic metrics enrichment via `dal.get_model(include_metrics=True)`
+
+**Impact:**
+- Metrics now display correctly on model detail pages
+- Fixed the "dashes instead of numbers" bug
+
+### 6. Metrics Service Robustness
 **User Edits:** October 14, 2025
 
 **Changes:**

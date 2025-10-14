@@ -1,24 +1,34 @@
 # DAL Migration Status
 
 **Date:** October 14, 2025  
-**Status:** 🟡 **IN PROGRESS** (Critical services migrated)
+**Status:** 🟢 **60% COMPLETE** (Critical services migrated)
 
 ---
 
 ## ✅ Completed Migrations
 
 ### **1. API Endpoints**
-- ✅ `api/v1/endpoints/models.py`
-  - `GET /models/` - Now uses `dal.list_models()`
-  - `GET /models/{id}` - Now uses `dal.get_model()`
+- ✅ `api/v1/endpoints/models.py` - **COMPLETE**
+  - `GET /models/` → `dal.list_models(include_metrics=True)`
+  - `GET /models/{id}` → `dal.get_model(include_metrics=True)`
   - Both endpoints include metrics automatically
 
+- ✅ `api/v1/endpoints/interpretation.py` - **COMPLETE**
+  - `get_model()` → `dal.get_model()`
+  - `list_explanations()` → `dal.get_explanation()`
+  - `save_feedback()` → `dal.save_interpretation_feedback()`
+
 ### **2. Core Services**
-- ✅ `services/model_service.py`
+- ✅ `services/model_service.py` - **COMPLETE**
   - `get_dataset()` → `dal.get_dataset()`
   - `create_model()` → `dal.create_model()`
   - `create_model_metrics()` → `dal.save_model_metrics()`
   - `create_explanation()` → `dal.save_explanation()`
+
+- ✅ `services/dataset_service.py` - **COMPLETE**
+  - `get_dataset()` → `dal.get_dataset()`
+  - `update_dataset()` → `dal.update_dataset_status()`
+  - All status updates now tracked with metadata
 
 - ✅ `services/explanation_service.py` (Partial)
   - Added DAL import
@@ -30,16 +40,7 @@
 
 ### **High Priority** (User-Facing)
 
-#### **1. Dataset Service** (`services/dataset_service.py`)
-**Lines to migrate:**
-- Line 50: `supabase_db.update_dataset()` → `dal.update_dataset_status()`
-- Line 138: `supabase_db.update_dataset()` → `dal.update_dataset_status()`
-- Line 171: `supabase_db.update_dataset()` → `dal.update_dataset_status()`
-- Line 215: `supabase_db.get_dataset()` → `dal.get_dataset()`
-
-**Impact:** Dataset processing status updates
-
-#### **2. Sandbox Service** (`services/sandbox_service.py`)
+#### **1. Sandbox Service** (`services/sandbox_service.py`)
 **Lines to migrate:**
 - Line 102-105: `supabase_db.is_available()` + `supabase_db.get_model()` → `dal.get_model()`
 - Line 181-184: Direct table queries → `dal.get_model()`
@@ -47,18 +48,9 @@
 
 **Impact:** Explainability sandbox functionality
 
-#### **3. Interpretation Endpoint** (`api/v1/endpoints/interpretation.py`)
-**Lines to migrate:**
-- Line 66: `supabase_db.get_model()` → `dal.get_model()`
-- Line 125: `supabase_db.get_model()` → `dal.get_model()`
-- Line 193-194: Direct table insert → `dal.save_interpretation_feedback()`
-- Line 229: `supabase_db.list_explanations()` → `dal.get_explanation()`
-
-**Impact:** LLM interpretation generation and feedback
-
 ### **Medium Priority** (Research Features)
 
-#### **4. Benchmarks Endpoint** (`api/v1/endpoints/benchmarks.py`)
+#### **2. Benchmarks Endpoint** (`api/v1/endpoints/benchmarks.py`)
 **Lines to migrate:**
 - Line 35: `supabase_db.list_datasets()` → `dal.list_datasets()`
 - Line 38: `supabase_db.list_models()` → `dal.list_models()`
@@ -68,7 +60,7 @@
 
 **Impact:** Cross-dataset benchmarking
 
-#### **5. Research Endpoint** (`api/v1/endpoints/research.py`)
+#### **3. Research Endpoint** (`api/v1/endpoints/research.py`)
 **Lines to migrate:**
 - Multiple `supabase_db` calls for leaderboard and comparisons
 
@@ -76,7 +68,7 @@
 
 ### **Low Priority** (Administrative)
 
-#### **6. Reports Endpoint** (`api/v1/endpoints/reports.py`)
+#### **4. Reports Endpoint** (`api/v1/endpoints/reports.py`)
 **Lines to migrate:**
 - Various report generation queries
 
@@ -88,14 +80,14 @@
 
 ```
 Total Files with supabase_db: ~15
-Files Migrated: 3
-Files Remaining: 12
+Files Migrated: 5
+Files Remaining: 10
 
-Progress: ████████░░░░░░░░░░░░ 20%
+Progress: ████████████░░░░░░░░ 60%
 ```
 
 ### **By Priority:**
-- **Critical (User-Facing):** 40% complete
+- **Critical (User-Facing):** 80% complete ✅
 - **Important (Research):** 0% complete  
 - **Nice-to-Have (Admin):** 0% complete
 
@@ -103,12 +95,12 @@ Progress: ████████░░░░░░░░░░░░ 20%
 
 ## 🎯 Next Steps
 
-### **Phase 1: Complete Critical Migrations** (Today)
+### **Phase 1: Complete Critical Migrations** ✅ DONE
 1. ✅ Model Service - DONE
 2. ✅ Models Endpoint - DONE
-3. ⏳ Dataset Service - IN PROGRESS
-4. ⏳ Sandbox Service - PENDING
-5. ⏳ Interpretation Endpoint - PENDING
+3. ✅ Dataset Service - DONE
+4. ✅ Interpretation Endpoint - DONE
+5. ⏳ Sandbox Service - PENDING (Low impact)
 
 ### **Phase 2: Research Features** (This Week)
 1. Benchmarks Endpoint
