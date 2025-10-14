@@ -117,15 +117,24 @@ export default function SandboxPage() {
   };
 
   const loadGlobalExplanations = async () => {
-    if (!selectedModel) return;
+    console.log('🔵 loadGlobalExplanations called!');
+    console.log('Selected model:', selectedModel);
     
+    if (!selectedModel) {
+      console.log('❌ No model selected, returning early');
+      return;
+    }
+    
+    console.log('✅ Model selected, proceeding...');
     setIsLoading(true);
     setError(null);
     
     try {
       const modelId = selectedModel.id || selectedModel.model_id;
+      console.log('Model ID:', modelId);
       
       // Load global SHAP
+      console.log('📡 Fetching global explanations...');
       const shapResponse = await explanationsAPI.getGlobalExplanations(modelId);
       console.log('Global explanations response:', shapResponse.data);
       console.log('SHAP data:', shapResponse.data.shap);
@@ -402,7 +411,14 @@ export default function SandboxPage() {
           </div>
           
           <button
-            onClick={viewMode === 'local' ? loadSamplePrediction : loadGlobalExplanations}
+            onClick={() => {
+              console.log('🔴 Button clicked! View mode:', viewMode);
+              if (viewMode === 'local') {
+                loadSamplePrediction();
+              } else {
+                loadGlobalExplanations();
+              }
+            }}
             disabled={!selectedModel || isLoading}
             className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
           >
