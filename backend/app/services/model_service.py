@@ -26,6 +26,7 @@ except ImportError:
 from app.core.config import settings
 from app.services.r2_service import r2_service
 from app.utils.supabase_client import supabase_db
+from app.core.data_access import dal
 
 logger = structlog.get_logger()
 
@@ -69,7 +70,7 @@ class ModelTrainingService:
         
         try:
             # 1. Check if dataset is processed
-            dataset = supabase_db.get_dataset(dataset_id)
+            dataset = dal.get_dataset(dataset_id)
             if not dataset or dataset['status'] != 'completed':
                 raise ValueError(f"Dataset {dataset_id} is not processed")
             
@@ -201,23 +202,12 @@ class ModelTrainingService:
                     'completed_at': pd.Timestamp.now().isoformat()
                 }
                 
-                created_model = supabase_db.create_model(model_data)
+                # Save model via DAL
+                created_model_id = dal.create_model(model_data, source_module="model_service")
                 
-                # 12. Save metrics to model_metrics table
-                if created_model:
-                    metrics_data = {
-                        'id': f"{model_id}_metrics",
-                        'model_id': model_id,
-                        'accuracy': metrics['accuracy'],
-                        'precision': metrics['precision'],
-                        'recall': metrics['recall'],
-                        'f1_score': metrics['f1_score'],
-                        'auc_roc': metrics['auc_roc'],
-                        'roc_curve': metrics.get('roc_curve'),
-                        'confusion_matrix': metrics.get('confusion_matrix'),
-                        'pr_curve': metrics.get('pr_curve')
-                    }
-                    supabase_db.create_model_metrics(metrics_data)
+                # 12. Save metrics via DAL
+                if created_model_id:
+                    dal.save_model_metrics(model_id, metrics, source_module="model_service")
                 
                 # 13. Generate SHAP explanation automatically
                 logger.info("Generating SHAP explanation", model_id=model_id)
@@ -226,19 +216,14 @@ class ModelTrainingService:
                         model, X_test, y_test, model_type
                     )
                     
-                    # Save explanation to database
+                    # Save explanation via DAL
                     explanation_id = f"{model_id}_shap"
                     explanation_data = {
-                        'id': explanation_id,
-                        'model_id': model_id,
-                        'method': 'shap',
                         'status': 'completed',
-                        'sample_size': min(100, len(X_test)),
-                        'feature_importance': shap_explanation['feature_importance'],
                         'explanation_data': shap_explanation,
                         'completed_at': pd.Timestamp.now().isoformat()
                     }
-                    supabase_db.create_explanation(explanation_data)
+                    dal.save_explanation(model_id, 'shap', explanation_data, source_module="model_service")
                     logger.info("SHAP explanation generated", explanation_id=explanation_id)
                 except Exception as e:
                     logger.warning("Failed to generate SHAP explanation", error=str(e))

@@ -12,6 +12,7 @@ import json
 
 from app.utils.r2_storage import r2_storage_client
 from app.utils.supabase_client import supabase_db
+from app.core.data_access import dal
 
 logger = structlog.get_logger()
 
