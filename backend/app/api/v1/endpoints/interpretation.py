@@ -321,7 +321,17 @@ async def get_model_shap_data(
         logger.info("Fetching SHAP data", model_id=model_id, base_model_id=base_model_id)
         
         # Get SHAP explanation via DAL
+        # First try to get with status filter
         shap_explanation = dal.get_explanation(base_model_id, method='shap', status='completed')
+        
+        # If not found, try without status filter (for backwards compatibility)
+        if not shap_explanation:
+            logger.info("No completed SHAP found, trying without status filter", model_id=base_model_id)
+            all_explanations = supabase_db.list_explanations(model_id=base_model_id)
+            shap_explanation = next(
+                (exp for exp in all_explanations if exp.get('method') == 'shap'),
+                None
+            )
         
         if not shap_explanation:
             # Provide helpful error message
