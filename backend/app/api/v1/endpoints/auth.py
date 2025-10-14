@@ -1,15 +1,14 @@
 """
 Authentication endpoints.
+NOTE: Currently disabled - using Supabase Auth instead of custom auth.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
 import uuid
 import structlog
 
-from app.core.database import get_db
+# from app.core.database import get_db  # Not used - Supabase only
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -50,11 +49,15 @@ class UserResponse(BaseModel):
 
 
 @router.post("/register", response_model=UserResponse)
-async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
-    """Register a new user."""
+async def register(user_data: UserRegister):
+    """Register a new user. NOTE: Currently disabled - use Supabase Auth."""
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Authentication via Supabase Auth - use Supabase client"
+    )
     # Check if user exists
-    result = await db.execute(select(User).where(User.email == user_data.email))
-    existing_user = result.scalar_one_or_none()
+    # result = await db.execute(select(User).where(User.email == user_data.email))
+    # existing_user = result.scalar_one_or_none()
     
     if existing_user:
         raise HTTPException(
@@ -88,11 +91,15 @@ async def register(user_data: UserRegister, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
-    """Login and get access tokens."""
+async def login(credentials: UserLogin):
+    """Login and get access tokens. NOTE: Currently disabled - use Supabase Auth."""
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Authentication via Supabase Auth - use Supabase client"
+    )
     # Find user
-    result = await db.execute(select(User).where(User.email == credentials.email))
-    user = result.scalar_one_or_none()
+    # result = await db.execute(select(User).where(User.email == credentials.email))
+    # user = result.scalar_one_or_none()
     
     if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
@@ -119,7 +126,7 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
+async def refresh_token(refresh_token: str):
     """Refresh access token using refresh token."""
     payload = decode_token(refresh_token)
     

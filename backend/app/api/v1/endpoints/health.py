@@ -1,14 +1,12 @@
 """
 Health check endpoints.
+NOTE: Using Supabase, not SQLAlchemy database checks.
 """
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-import redis.asyncio as redis
+from fastapi import APIRouter
 import structlog
 
-from app.core.database import get_db
+from app.utils.supabase_client import supabase_db
 from app.core.config import settings
 
 router = APIRouter()
@@ -22,42 +20,38 @@ async def health_check():
 
 
 @router.get("/detailed")
-async def detailed_health_check(db: AsyncSession = Depends(get_db)):
+async def detailed_health_check():
     """Detailed health check with service status."""
     health_status = {
         "status": "healthy",
         "services": {}
     }
     
-    # Check database
+    # Check Supabase
     try:
-        await db.execute(text("SELECT 1"))
-        health_status["services"]["database"] = {"status": "healthy"}
+        if supabase_db.is_available():
+            # Try a simple query
+            supabase_db.client.table('datasets').select('id').limit(1).execute()
+            health_status["services"]["supabase"] = {"status": "healthy"}
+        else:
+            health_status["services"]["supabase"] = {"status": "unavailable"}
+            health_status["status"] = "degraded"
     except Exception as e:
-        logger.error("Database health check failed", exc_info=e)
-        health_status["services"]["database"] = {"status": "unhealthy", "error": str(e)}
-        health_status["status"] = "unhealthy"
-    
-    # Check Redis
-    try:
-        redis_client = redis.from_url(settings.REDIS_URL)
-        await redis_client.ping()
-        await redis_client.close()
-        health_status["services"]["redis"] = {"status": "healthy"}
-    except Exception as e:
-        logger.error("Redis health check failed", exc_info=e)
-        health_status["services"]["redis"] = {"status": "unhealthy", "error": str(e)}
+        logger.error("Supabase health check failed", exc_info=e)
+        health_status["services"]["supabase"] = {"status": "unhealthy", "error": str(e)}
         health_status["status"] = "unhealthy"
     
     return health_status
 
 
 @router.get("/readiness")
-async def readiness_check(db: AsyncSession = Depends(get_db)):
+async def readiness_check():
     """Kubernetes readiness probe."""
     try:
-        await db.execute(text("SELECT 1"))
-        return {"status": "ready"}
+        if supabase_db.is_available():
+            supabase_db.client.table('datasets').select('id').limit(1).execute()
+            return {"status": "ready"}
+        return {"status": "not ready"}
     except Exception:
         return {"status": "not ready"}
 

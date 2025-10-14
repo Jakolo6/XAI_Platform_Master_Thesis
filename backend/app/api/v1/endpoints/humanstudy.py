@@ -13,9 +13,9 @@ from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 import uuid
 import random
-
-from app.core.database import get_db
 import logging
+
+# from app.core.database import get_db  # Not used - Supabase only
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -148,7 +148,6 @@ def randomize_method(seed: int, question_index: int) -> str:
 @router.post("/session/start", response_model=SessionResponse)
 async def start_study_session(
     request: SessionStartRequest,
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
@@ -187,12 +186,11 @@ async def start_study_session(
         )
 
 
-@router.get("/questions", response_model=List[StudyQuestionResponse])
-async def get_study_questions(
+@router.get("/session/{session_id}/questions", response_model=List[StudyQuestionResponse])
+async def get_session_questions(
     session_id: str,
     num_questions: int = 10,
     randomization_seed: Optional[int] = None,
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
@@ -280,7 +278,6 @@ async def get_study_questions(
 @router.post("/response")
 async def submit_evaluation(
     evaluation: EvaluationRequest,
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
@@ -332,7 +329,6 @@ async def submit_evaluation(
 async def get_aggregated_results(
     model_id: Optional[str] = None,
     method: Optional[str] = None,
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_researcher)
 ):
     """
@@ -426,7 +422,6 @@ async def get_aggregated_results(
 
 @router.get("/results/correlation")
 async def get_human_quantitative_correlation(
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_researcher)
 ):
     """
@@ -472,7 +467,6 @@ async def get_human_quantitative_correlation(
 @router.get("/session/{session_id}/progress")
 async def get_session_progress(
     session_id: str,
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     """
