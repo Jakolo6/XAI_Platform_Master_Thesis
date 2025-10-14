@@ -109,14 +109,24 @@ async def train_model(
             )
         
         # Wrapper to catch background task errors
-        async def train_with_error_handling():
+        def train_with_error_handling():
             import sys
+            import traceback
             try:
+                print("=" * 80, flush=True)
+                print("🚀 BACKGROUND TRAINING STARTED", flush=True)
+                print(f"Dataset: {request.dataset_id}", flush=True)
+                print(f"Model Type: {request.model_type}", flush=True)
+                print(f"Model Name: {request.model_name}", flush=True)
+                print("=" * 80, flush=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
+                
                 logger.info("🚀 Background training started",
                            dataset_id=request.dataset_id,
                            model_type=request.model_type,
                            model_name=request.model_name)
-                sys.stdout.flush()  # Force log flush
+                sys.stdout.flush()
                 
                 result = model_service.train_model(
                     request.dataset_id,
@@ -125,17 +135,35 @@ async def train_model(
                     request.model_name
                 )
                 
+                print("=" * 80, flush=True)
+                print("✅ BACKGROUND TRAINING COMPLETED", flush=True)
+                print(f"Result: {result.get('status')}", flush=True)
+                print("=" * 80, flush=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
+                
                 logger.info("✅ Background training completed",
                            dataset_id=request.dataset_id,
                            result_status=result.get('status'))
-                sys.stdout.flush()  # Force log flush
+                sys.stdout.flush()
                 
             except Exception as e:
+                error_trace = traceback.format_exc()
+                print("=" * 80, flush=True)
+                print("❌ BACKGROUND TRAINING FAILED", flush=True)
+                print(f"Error: {str(e)}", flush=True)
+                print(f"Traceback:\n{error_trace}", flush=True)
+                print("=" * 80, flush=True)
+                sys.stdout.flush()
+                sys.stderr.flush()
+                
                 logger.error("❌ Background training failed",
                            dataset_id=request.dataset_id,
                            error=str(e),
+                           traceback=error_trace,
                            exc_info=True)
-                sys.stdout.flush()  # Force log flush
+                sys.stdout.flush()
+                sys.stderr.flush()
         
         # Add wrapped task to background
         background_tasks.add_task(train_with_error_handling)
