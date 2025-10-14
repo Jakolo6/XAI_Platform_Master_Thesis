@@ -81,7 +81,6 @@ export default function SandboxPage() {
   const [interpretation, setInterpretation] = useState<string>('');
   const [ruleBasedInterpretation, setRuleBasedInterpretation] = useState<any>(null);
   const [llmInterpretation, setLlmInterpretation] = useState<any>(null);
-  const [interpretationMode, setInterpretationMode] = useState<'rule-based' | 'llm' | 'both'>('both');
   const [isLoadingInterpretation, setIsLoadingInterpretation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +205,7 @@ export default function SandboxPage() {
         model_id: modelId,
         instance_id: selectedInstance.instance_id,
         shap_data: shapExplanation,
-        mode: interpretationMode
+        mode: 'both' // Always request both interpretations
       };
       
       console.log('Sending interpretation request:', requestBody);
@@ -227,16 +226,9 @@ export default function SandboxPage() {
       
       const data = await response.json();
       
-      if (interpretationMode === 'both') {
-        setRuleBasedInterpretation(data.rule_based);
-        setLlmInterpretation(data.llm_based);
-      } else if (interpretationMode === 'rule-based') {
-        setRuleBasedInterpretation(data.rule_based);
-        setLlmInterpretation(null);
-      } else {
-        setLlmInterpretation(data.llm_based);
-        setRuleBasedInterpretation(null);
-      }
+      // Always set both interpretations
+      setRuleBasedInterpretation(data.rule_based);
+      setLlmInterpretation(data.llm_based);
       
     } catch (error: any) {
       console.error('Failed to load interpretations:', error);
@@ -714,41 +706,7 @@ export default function SandboxPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <Brain className="w-6 h-6 text-purple-600" />
-                <h2 className="text-2xl font-bold text-gray-900">Human-Readable Explanations</h2>
-              </div>
-              
-              {/* Mode Toggle */}
-              <div className="flex gap-2 bg-white rounded-lg p-1 border border-purple-200">
-                <button
-                  onClick={() => setInterpretationMode('rule-based')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    interpretationMode === 'rule-based'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Rule-Based
-                </button>
-                <button
-                  onClick={() => setInterpretationMode('llm')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    interpretationMode === 'llm'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  LLM-Based
-                </button>
-                <button
-                  onClick={() => setInterpretationMode('both')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    interpretationMode === 'both'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Compare Both
-                </button>
+                <h2 className="text-2xl font-bold text-gray-900">Compare Rule-Based vs LLM-Based Explanations</h2>
               </div>
             </div>
 
@@ -760,19 +718,19 @@ export default function SandboxPage() {
               {isLoadingInterpretation ? (
                 <>
                   <RefreshCw className="w-5 h-5 animate-spin" />
-                  Generating...
+                  Generating Explanations...
                 </>
               ) : (
                 <>
                   <Brain className="w-5 h-5" />
-                  Generate Explanation{interpretationMode === 'both' ? 's' : ''}
+                  Generate Both Explanations
                 </>
               )}
             </button>
 
-            {/* Explanations Display */}
-            {(ruleBasedInterpretation || llmInterpretation) && (
-              <div className={`grid ${interpretationMode === 'both' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+            {/* Explanations Display - Always show both side-by-side */}
+            {(ruleBasedInterpretation && llmInterpretation) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Rule-Based Explanation */}
                 {ruleBasedInterpretation && (
                   <div className="bg-gray-50 rounded-xl p-6 border-2 border-gray-300">
