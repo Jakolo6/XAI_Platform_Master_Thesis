@@ -128,6 +128,7 @@ CREATE TABLE explanations (
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
     -- DAL metadata columns
     last_updated TIMESTAMPTZ DEFAULT NOW(),
     source_module VARCHAR(100)
