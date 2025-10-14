@@ -127,6 +127,10 @@ export default function SandboxPage() {
       
       // Load global SHAP
       const shapResponse = await explanationsAPI.getGlobalExplanations(modelId);
+      console.log('Global explanations response:', shapResponse.data);
+      console.log('SHAP data:', shapResponse.data.shap);
+      console.log('LIME data:', shapResponse.data.lime);
+      
       setShapGlobal(shapResponse.data.shap);
       
       // Load global LIME  
