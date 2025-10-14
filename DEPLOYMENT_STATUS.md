@@ -126,25 +126,46 @@
 - Easier to debug failed training jobs
 - Clear status indicators in logs
 
-### 8. Database Schema Update Required 🚨
-**Migration:** `5_add_dal_metadata_columns.sql`
+### 8. Database Schema Consolidated 🚨 ACTION REQUIRED
+**Files:** `1_supabase_reset.sql` + `FINAL_supabase_schema.sql`
 
 **Issue Found:**
 - DAL adds `last_updated` and `source_module` columns
 - These columns don't exist in current Supabase schema
 - **This is why model creation is failing!**
 
-**Required Action:**
-Run the migration in Supabase SQL Editor:
+**Required Action - Run in Supabase SQL Editor:**
+
+**Option 1: Fresh Database (Recommended)**
 ```sql
--- See: backend/migrations/5_add_dal_metadata_columns.sql
+-- Step 1: Reset (WARNING: Deletes all data!)
+-- Run: backend/migrations/1_supabase_reset.sql
+
+-- Step 2: Create complete schema
+-- Run: backend/migrations/FINAL_supabase_schema.sql
 ```
 
-**What it adds:**
-- ✅ `last_updated` column to models, model_metrics, datasets, explanations
-- ✅ `source_module` column to track which service made changes
-- ✅ `interpretation_feedback` table for LLM interpretation ratings
-- ✅ Indexes for performance
+**Option 2: Update Existing Database**
+```sql
+-- Only add missing columns (keeps existing data)
+-- Run: backend/migrations/5_add_dal_metadata_columns.sql
+```
+
+**What FINAL_supabase_schema.sql includes:**
+- ✅ All core tables (users, datasets, models, metrics, explanations)
+- ✅ Human study tables (sessions, questions, evaluations)
+- ✅ Sandbox tables (instances, ratings)
+- ✅ Interpretation feedback table (LLM vs Rule-based)
+- ✅ DAL metadata columns (last_updated, source_module)
+- ✅ All indexes for performance
+- ✅ All views for analytics
+- ✅ All triggers for auto-updates
+
+**Tables:** 11 total
+- Core: users, datasets, models, model_metrics, explanations
+- Study: study_sessions, study_questions, human_evaluations
+- Sandbox: sandbox_instances, explanation_ratings
+- Interpretation: interpretation_feedback
 
 ---
 
