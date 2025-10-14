@@ -8,7 +8,8 @@ import { BarChart3, TrendingUp, Award, Clock, ExternalLink } from 'lucide-react'
 import { benchmarksAPI } from '@/lib/api';
 
 interface ModelData {
-  model_id: string;
+  id?: string;  // New models use 'id'
+  model_id?: string;  // Old models use 'model_id'
   model_name: string;
   model_type: string;
   auc_roc: number;
@@ -199,9 +200,9 @@ export default function BenchmarksPage() {
                         
                         return (
                           <tr 
-                            key={model.model_id}
+                            key={model.model_id || model.id}
                             className={`${isBest ? 'bg-yellow-50' : 'hover:bg-gray-50'} cursor-pointer transition-colors`}
-                            onClick={() => model.model_id && (window.location.href = `/models/${model.model_id}`)}
+                            onClick={() => (model.model_id || model.id) && (window.location.href = `/models/${model.model_id || model.id}`)}
                           >
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center justify-between">
@@ -218,7 +219,7 @@ export default function BenchmarksPage() {
                                     {model.model_type}
                                   </span>
                                 </div>
-                                {model.model_id && (
+                                {(model.model_id || model.id) && (
                                   <ExternalLink className="h-4 w-4 text-gray-400" />
                                 )}
                               </div>

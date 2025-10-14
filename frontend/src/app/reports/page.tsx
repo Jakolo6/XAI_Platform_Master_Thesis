@@ -31,7 +31,8 @@ export default function ReportsPage() {
       const response = await researchAPI.getLeaderboard();
       // Get unique models (remove duplicates from SHAP/LIME entries)
       const uniqueModels = response.data.models.reduce((acc: any[], model: any) => {
-        if (!acc.find(m => m.model_id === model.model_id)) {
+        const modelId = model.id || model.model_id;
+        if (!acc.find(m => (m.id || m.model_id) === modelId)) {
           acc.push(model);
         }
         return acc;
@@ -186,7 +187,7 @@ export default function ReportsPage() {
             <div className="space-y-3">
               {models.map((model) => (
                 <div
-                  key={model.model_id}
+                  key={model.id || model.model_id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                 >
                   <div className="flex-1">
@@ -197,34 +198,41 @@ export default function ReportsPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => handleExport('model', model.model_id)}
-                      disabled={exportStatus[`model-${model.model_id}`] === 'loading'}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
-                    >
-                      {exportStatus[`model-${model.model_id}`] === 'loading' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : exportStatus[`model-${model.model_id}`] === 'success' ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <FileDown className="h-4 w-4" />
-                      )}
-                      Model CSV
-                    </button>
-                    <button
-                      onClick={() => handleExport('comparison', model.model_id)}
-                      disabled={exportStatus[`comparison-${model.model_id}`] === 'loading'}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm"
-                    >
-                      {exportStatus[`comparison-${model.model_id}`] === 'loading' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : exportStatus[`comparison-${model.model_id}`] === 'success' ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <FileDown className="h-4 w-4" />
-                      )}
-                      Comparison JSON
-                    </button>
+                    {(() => {
+                      const modelId = model.id || model.model_id;
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleExport('model', modelId)}
+                            disabled={exportStatus[`model-${modelId}`] === 'loading'}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                          >
+                            {exportStatus[`model-${modelId}`] === 'loading' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : exportStatus[`model-${modelId}`] === 'success' ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              <FileDown className="h-4 w-4" />
+                            )}
+                            Model CSV
+                          </button>
+                          <button
+                            onClick={() => handleExport('comparison', modelId)}
+                            disabled={exportStatus[`comparison-${modelId}`] === 'loading'}
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm"
+                          >
+                            {exportStatus[`comparison-${modelId}`] === 'loading' ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : exportStatus[`comparison-${modelId}`] === 'success' ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              <FileDown className="h-4 w-4" />
+                            )}
+                            Comparison CSV
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
