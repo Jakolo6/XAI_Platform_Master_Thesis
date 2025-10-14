@@ -108,16 +108,35 @@ async def train_model(
                 detail=f"Unsupported model type: {request.model_type}. Supported: {supported_models}"
             )
         
-        # Add training to background tasks
-        background_tasks.add_task(
-            model_service.train_model,
-            request.dataset_id,
-            request.model_type,
-            request.hyperparameters,
-            request.model_name  # Pass custom name
-        )
+        # Wrapper to catch background task errors
+        async def train_with_error_handling():
+            try:
+                logger.info("🚀 Background training started",
+                           dataset_id=request.dataset_id,
+                           model_type=request.model_type,
+                           model_name=request.model_name)
+                
+                result = model_service.train_model(
+                    request.dataset_id,
+                    request.model_type,
+                    request.hyperparameters,
+                    request.model_name
+                )
+                
+                logger.info("✅ Background training completed",
+                           dataset_id=request.dataset_id,
+                           result_status=result.get('status'))
+                
+            except Exception as e:
+                logger.error("❌ Background training failed",
+                           dataset_id=request.dataset_id,
+                           error=str(e),
+                           exc_info=True)
         
-        logger.info("Model training queued",
+        # Add wrapped task to background
+        background_tasks.add_task(train_with_error_handling)
+        
+        logger.info("📋 Model training queued",
                    dataset_id=request.dataset_id,
                    model_type=request.model_type,
                    model_name=request.model_name)
