@@ -11,6 +11,7 @@ from app.api.dependencies import get_current_researcher
 from app.services.model_service import model_service
 from app.services.dataset_service import dataset_service
 from app.utils.supabase_client import supabase_db
+from app.core.data_access import dal
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -30,22 +31,16 @@ async def list_models(
     dataset_id: Optional[str] = None,
     current_user: str = Depends(get_current_researcher)
 ):
-    """List all trained models, optionally filtered by dataset."""
+    """List all trained models with metrics, optionally filtered by dataset."""
     try:
-        models = supabase_db.list_models(dataset_id=dataset_id)
+        # Use DAL to get models with metrics automatically included
+        models = dal.list_models(dataset_id=dataset_id, include_metrics=True)
         
-        # Enrich each model with its metrics
-        enriched_models = []
-        for model in models:
-            metrics = supabase_db.get_model_metrics(model['id'])
-            if metrics:
-                # Merge metrics into model object
-                model_with_metrics = {**model, **metrics}
-            else:
-                model_with_metrics = model
-            enriched_models.append(model_with_metrics)
+        logger.info("Models listed with metrics", 
+                   count=len(models),
+                   dataset_id=dataset_id)
         
-        return enriched_models
+        return models
     except Exception as e:
         logger.error("Failed to list models", exc_info=e)
         return []
@@ -56,9 +51,10 @@ async def get_model(
     model_id: str,
     current_user: str = Depends(get_current_researcher)
 ):
-    """Get detailed information about a specific model."""
+    """Get detailed information about a specific model with metrics."""
     try:
-        model = supabase_db.get_model(model_id)
+        # Use DAL to get model with metrics automatically included
+        model = dal.get_model(model_id, include_metrics=True)
         
         if not model:
             raise HTTPException(
@@ -66,10 +62,10 @@ async def get_model(
                 detail=f"Model {model_id} not found"
             )
         
-        # Enrich with metrics
-        metrics = supabase_db.get_model_metrics(model_id)
-        if metrics:
-            model = {**model, **metrics}
+        logger.info("Model retrieved with metrics", 
+                   model_id=model_id,
+                   has_auc_roc='auc_roc' in model,
+                   auc_roc=model.get('auc_roc'))
         
         return model
     
