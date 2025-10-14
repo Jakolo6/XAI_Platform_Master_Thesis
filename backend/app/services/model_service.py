@@ -70,9 +70,18 @@ class ModelTrainingService:
         
         try:
             # 1. Check if dataset is processed
+            logger.info("Fetching dataset info", dataset_id=dataset_id)
             dataset = dal.get_dataset(dataset_id)
-            if not dataset or dataset['status'] != 'completed':
-                raise ValueError(f"Dataset {dataset_id} is not processed")
+            
+            if not dataset:
+                logger.error("Dataset not found", dataset_id=dataset_id)
+                raise ValueError(f"Dataset {dataset_id} not found")
+            
+            logger.info("Dataset found", dataset_id=dataset_id, status=dataset.get('status'))
+            
+            if dataset['status'] != 'completed':
+                logger.error("Dataset not processed", dataset_id=dataset_id, status=dataset['status'])
+                raise ValueError(f"Dataset {dataset_id} is not processed (status: {dataset['status']})")
             
             file_path = dataset.get('file_path')
             if not file_path:
@@ -249,16 +258,25 @@ class ModelTrainingService:
                     logger.debug("Temp directory cleaned up", path=str(temp_dir))
         
         except Exception as e:
+            import sys
+            import traceback
+            
+            error_details = traceback.format_exc()
             logger.error("Model training failed",
                         model_id=model_id,
                         dataset_id=dataset_id,
-                        exc_info=e)
+                        error=str(e),
+                        traceback=error_details,
+                        exc_info=True)
+            sys.stdout.flush()
+            sys.stderr.flush()
             
             return {
                 'status': 'error',
                 'model_id': model_id,
                 'dataset_id': dataset_id,
-                'error': str(e)
+                'error': str(e),
+                'traceback': error_details
             }
     
     def _train_model(
