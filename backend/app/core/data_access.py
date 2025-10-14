@@ -143,17 +143,29 @@ class DataAccessLayer:
         """
         try:
             model_data = self._add_metadata(model_data, source_module)
+            
+            logger.debug("Creating model in database", 
+                        model_id=model_data.get('id'),
+                        model_name=model_data.get('name'))
+            
             result = self.db.client.table('models').insert(model_data).execute()
             
             if result.data:
                 model_id = result.data[0]['id']
-                logger.info("Model created", model_id=model_id, source=source_module)
+                logger.info("Model created successfully", 
+                           model_id=model_id, 
+                           model_name=model_data.get('name'),
+                           source=source_module)
                 return model_id
             
+            logger.error("Model creation returned no data", model_data=model_data)
             return None
             
         except Exception as e:
-            logger.error("Failed to create model", error=str(e))
+            logger.error("Failed to create model", 
+                        error=str(e),
+                        model_id=model_data.get('id'),
+                        exc_info=True)
             return None
     
     def update_model(

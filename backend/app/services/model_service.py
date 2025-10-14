@@ -212,11 +212,18 @@ class ModelTrainingService:
                 }
                 
                 # Save model via DAL
+                logger.info("Saving model to database", model_id=model_id)
                 created_model_id = dal.create_model(model_data, source_module="model_service")
                 
+                if not created_model_id:
+                    raise RuntimeError(f"Failed to save model {model_id} to database")
+                
+                logger.info("Model saved successfully", model_id=model_id)
+                
                 # 12. Save metrics via DAL
-                if created_model_id:
-                    dal.save_model_metrics(model_id, metrics, source_module="model_service")
+                logger.info("Saving model metrics", model_id=model_id)
+                dal.save_model_metrics(model_id, metrics, source_module="model_service")
+                logger.info("Metrics saved successfully", model_id=model_id)
                 
                 # 13. Generate SHAP explanation automatically
                 logger.info("Generating SHAP explanation", model_id=model_id)
