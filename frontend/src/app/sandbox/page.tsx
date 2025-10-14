@@ -460,10 +460,42 @@ export default function SandboxPage() {
           ) : (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
               <Globe className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Global Explanations Loaded</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Global Explanations Available</h3>
               <p className="text-gray-600 mb-4">
-                Select a model and click "Load Global Explanations" to view model-level feature importance.
+                Global explanations haven't been generated for this model yet. Generate them first to view model-level feature importance.
               </p>
+              <button
+                onClick={async () => {
+                  if (!selectedModel) return;
+                  setIsLoading(true);
+                  try {
+                    const modelId = selectedModel.id || selectedModel.model_id;
+                    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+                    
+                    // Generate SHAP
+                    await fetch(`${apiBaseUrl}/explanations/generate`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        model_id: modelId,
+                        method: 'shap',
+                        sample_size: 1000
+                      })
+                    });
+                    
+                    alert('Global explanation generation started! This may take a few minutes. Refresh to check status.');
+                  } catch (error) {
+                    console.error('Failed to generate explanations:', error);
+                    alert('Failed to start explanation generation');
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={!selectedModel || isLoading}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                Generate Global Explanations
+              </button>
             </div>
           )
         ) : viewMode === 'local' && selectedInstance && shapExplanation ? (
