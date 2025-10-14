@@ -79,9 +79,17 @@ export default function SandboxPage() {
   const [shapGlobal, setShapGlobal] = useState<any>(null);
   const [limeGlobal, setLimeGlobal] = useState<any>(null);
   const [interpretation, setInterpretation] = useState<string>('');
+  const [ruleBasedInterpretation, setRuleBasedInterpretation] = useState<any>(null);
+  const [llmInterpretation, setLlmInterpretation] = useState<any>(null);
+  const [interpretationMode, setInterpretationMode] = useState<'rule-based' | 'llm' | 'both'>('both');
+  const [isLoadingInterpretation, setIsLoadingInterpretation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'shap' | 'lime' | 'comparison'>('shap');
+  
+  // Rating state
+  const [ruleBasedRating, setRuleBasedRating] = useState({ clarity: 0, trust: 0, fairness: 0 });
+  const [llmRating, setLlmRating] = useState({ clarity: 0, trust: 0, fairness: 0 });
 
   useEffect(() => {
     loadModels();
@@ -182,6 +190,52 @@ export default function SandboxPage() {
     });
     
     setInterpretation(text);
+  };
+
+  const loadDualInterpretations = async () => {
+    if (!selectedModel || !selectedInstance || !shapExplanation) return;
+    
+    setIsLoadingInterpretation(true);
+    
+    try {
+      const modelId = selectedModel.id || selectedModel.model_id;
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/interpretation/local`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model_id: modelId,
+          instance_id: selectedInstance.instance_id,
+          shap_data: shapExplanation,
+          mode: interpretationMode
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate interpretations');
+      }
+      
+      const data = await response.json();
+      
+      if (interpretationMode === 'both') {
+        setRuleBasedInterpretation(data.rule_based);
+        setLlmInterpretation(data.llm_based);
+      } else if (interpretationMode === 'rule-based') {
+        setRuleBasedInterpretation(data.rule_based);
+        setLlmInterpretation(null);
+      } else {
+        setLlmInterpretation(data.llm_based);
+        setRuleBasedInterpretation(null);
+      }
+      
+    } catch (error: any) {
+      console.error('Failed to load interpretations:', error);
+      setError('Failed to generate human-readable interpretations');
+    } finally {
+      setIsLoadingInterpretation(false);
+    }
   };
 
   const getFeatureComparison = (): FeatureComparison[] => {
@@ -646,55 +700,220 @@ export default function SandboxPage() {
           </div>
         )}
 
-        {/* 4️⃣ HUMAN-READABLE SUMMARY */}
-        {interpretation && (
+        {/* 4️⃣ DUAL INTERPRETATION - RULE-BASED vs LLM-BASED */}
+        {shapExplanation && selectedInstance && (
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-lg border border-purple-200 p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Brain className="w-6 h-6 text-purple-600" />
-              Human-Readable Summary
-            </h2>
-            
-            <div className="prose prose-sm max-w-none">
-              <div className="bg-white rounded-lg p-6 border border-purple-200">
-                <div dangerouslySetInnerHTML={{ __html: interpretation.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>') }} />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Brain className="w-6 h-6 text-purple-600" />
+                <h2 className="text-2xl font-bold text-gray-900">Human-Readable Explanations</h2>
+              </div>
+              
+              {/* Mode Toggle */}
+              <div className="flex gap-2 bg-white rounded-lg p-1 border border-purple-200">
+                <button
+                  onClick={() => setInterpretationMode('rule-based')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    interpretationMode === 'rule-based'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Rule-Based
+                </button>
+                <button
+                  onClick={() => setInterpretationMode('llm')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    interpretationMode === 'llm'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  LLM-Based
+                </button>
+                <button
+                  onClick={() => setInterpretationMode('both')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    interpretationMode === 'both'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Compare Both
+                </button>
               </div>
             </div>
 
-            <div className="mt-6 bg-white rounded-lg p-6 border border-purple-200">
-              <h3 className="font-semibold text-gray-900 mb-3">Rate this explanation (optional)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Clarity</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="text-2xl text-yellow-400 hover:text-yellow-500">
-                        ★
-                      </button>
-                    ))}
+            <button
+              onClick={loadDualInterpretations}
+              disabled={isLoadingInterpretation}
+              className="mb-6 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2 font-medium"
+            >
+              {isLoadingInterpretation ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-5 h-5" />
+                  Generate Explanation{interpretationMode === 'both' ? 's' : ''}
+                </>
+              )}
+            </button>
+
+            {/* Explanations Display */}
+            {(ruleBasedInterpretation || llmInterpretation) && (
+              <div className={`grid ${interpretationMode === 'both' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+                {/* Rule-Based Explanation */}
+                {ruleBasedInterpretation && (
+                  <div className="bg-gray-50 rounded-xl p-6 border-2 border-gray-300">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Target className="w-5 h-5 text-gray-700" />
+                      <h3 className="text-lg font-bold text-gray-900">Rule-Based Interpretation</h3>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-4 italic">Deterministic SHAP reasoning</p>
+                    
+                    <div className="prose prose-sm max-w-none text-gray-800">
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: ruleBasedInterpretation.interpretation
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\n/g, '<br/>') 
+                      }} />
+                    </div>
+
+                    {/* Rating for Rule-Based */}
+                    <div className="mt-6 pt-6 border-t border-gray-300">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Rate this explanation</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Clarity</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setRuleBasedRating({ ...ruleBasedRating, clarity: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= ruleBasedRating.clarity ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Trust</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setRuleBasedRating({ ...ruleBasedRating, trust: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= ruleBasedRating.trust ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Fairness</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setRuleBasedRating({ ...ruleBasedRating, fairness: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= ruleBasedRating.fairness ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Trust</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="text-2xl text-yellow-400 hover:text-yellow-500">
-                        ★
-                      </button>
-                    ))}
+                )}
+
+                {/* LLM-Based Explanation */}
+                {llmInterpretation && (
+                  <div className="bg-white rounded-xl p-6 border-2 border-purple-300">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Brain className="w-5 h-5 text-purple-700" />
+                      <h3 className="text-lg font-bold text-gray-900">LLM-Based Interpretation</h3>
+                    </div>
+                    <p className="text-xs text-gray-600 mb-4 italic">Natural language via GPT-4</p>
+                    
+                    <div className="prose prose-sm max-w-none text-gray-800">
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: llmInterpretation.interpretation
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\n/g, '<br/>') 
+                      }} />
+                    </div>
+
+                    {/* Rating for LLM */}
+                    <div className="mt-6 pt-6 border-t border-purple-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-3">Rate this explanation</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Clarity</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setLlmRating({ ...llmRating, clarity: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= llmRating.clarity ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Trust</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setLlmRating({ ...llmRating, trust: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= llmRating.trust ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Fairness</label>
+                          <div className="flex gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setLlmRating({ ...llmRating, fairness: star })}
+                                className={`text-xl transition-colors ${
+                                  star <= llmRating.fairness ? 'text-yellow-400' : 'text-gray-300'
+                                } hover:text-yellow-500`}
+                              >
+                                ★
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Actionability</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button key={star} className="text-2xl text-yellow-400 hover:text-yellow-500">
-                        ★
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
+            )}
           </div>
         )}
           </>

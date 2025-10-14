@@ -101,6 +101,100 @@ async def generate_interpretation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/local")
+async def generate_local_interpretation(
+    model_id: str,
+    instance_id: str,
+    shap_data: Dict[str, Any],
+    mode: Literal["llm", "rule-based", "both"] = "both",
+    current_user: str = Depends(get_current_researcher)
+):
+    """
+    Generate human-readable interpretation for a local (instance-level) explanation.
+    
+    This endpoint supports dual interpretation paradigms:
+    - Rule-based: Deterministic SHAP reasoning
+    - LLM-based: Natural language generation via GPT-4
+    - Both: Side-by-side comparison
+    
+    Args:
+        model_id: Model identifier
+        instance_id: Sample instance identifier
+        shap_data: SHAP explanation data
+        mode: Interpretation mode ("llm", "rule-based", or "both")
+        current_user: Authenticated user
+        
+    Returns:
+        Interpretation(s) with metadata
+    """
+    try:
+        # Strip _metrics suffix if present
+        base_model_id = model_id.replace('_metrics', '')
+        
+        # Get model context via DAL
+        model = dal.get_model(base_model_id, include_metrics=False)
+        if not model:
+            raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
+        
+        model_context = {
+            "model_type": model.get("model_type"),
+            "dataset_id": model.get("dataset_id"),
+            "name": model.get("name")
+        }
+        
+        logger.info("Generating local interpretation",
+                   model_id=model_id,
+                   instance_id=instance_id,
+                   mode=mode)
+        
+        if mode == "both":
+            # Generate both interpretations
+            llm_result = interpretation_service.generate_interpretation(
+                shap_data=shap_data,
+                mode="llm",
+                model_context=model_context
+            )
+            
+            rule_based_result = interpretation_service.generate_interpretation(
+                shap_data=shap_data,
+                mode="rule-based",
+                model_context=model_context
+            )
+            
+            return {
+                "llm_based": llm_result,
+                "rule_based": rule_based_result,
+                "metadata": {
+                    "model_id": base_model_id,
+                    "instance_id": instance_id,
+                    "model_context": model_context
+                }
+            }
+        else:
+            # Generate single interpretation
+            result = interpretation_service.generate_interpretation(
+                shap_data=shap_data,
+                mode=mode,
+                model_context=model_context
+            )
+            
+            return {
+                mode.replace("-", "_"): result,
+                "metadata": {
+                    "model_id": base_model_id,
+                    "instance_id": instance_id,
+                    "model_context": model_context
+                }
+            }
+        
+    except Exception as e:
+        logger.error("Failed to generate local interpretation",
+                    model_id=model_id,
+                    instance_id=instance_id,
+                    error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/compare")
 async def compare_interpretations(
     model_id: str,
