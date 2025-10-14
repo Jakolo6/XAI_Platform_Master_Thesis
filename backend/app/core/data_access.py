@@ -392,7 +392,8 @@ class DataAccessLayer:
         model_id: str,
         method: str,
         explanation_data: Dict[str, Any],
-        source_module: str = "explanation_service"
+        source_module: str = "explanation_service",
+        explanation_type: str = "global"
     ) -> Optional[str]:
         """
         Save explanation data.
@@ -402,6 +403,7 @@ class DataAccessLayer:
             method: Explanation method
             explanation_data: Explanation data
             source_module: Module saving explanation
+            explanation_type: Type of explanation ('global' or 'local')
             
         Returns:
             Explanation ID if successful
@@ -412,6 +414,7 @@ class DataAccessLayer:
             data = {
                 'model_id': base_model_id,
                 'method': method,
+                'explanation_type': explanation_type,
                 **explanation_data,
                 **self._add_metadata({}, source_module)
             }
