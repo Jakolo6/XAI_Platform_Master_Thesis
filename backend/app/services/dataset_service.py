@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.utils.kaggle_client import KaggleClient
 from app.utils.r2_storage import r2_storage_client
 from app.utils.supabase_client import supabase_db
+from app.core.data_access import dal
 from app.datasets.loaders import get_loader
 from app.datasets.registry import get_dataset_registry
 
@@ -46,8 +47,8 @@ class DatasetProcessingService:
             if not config:
                 raise ValueError(f"Dataset {dataset_id} not found in registry")
             
-            # 2. Update status to processing
-            supabase_db.update_dataset(dataset_id, {'status': 'processing'})
+            # 2. Update status to processing via DAL
+            dal.update_dataset_status(dataset_id, 'processing', processed=False, source_module='dataset_service')
             
             # 3. Create temp directory
             temp_dir = Path(f"/tmp/{dataset_id}_{uuid.uuid4().hex[:8]}")
@@ -135,7 +136,8 @@ class DatasetProcessingService:
                     'completed_at': pd.Timestamp.now().isoformat()
                 }
                 
-                supabase_db.update_dataset(dataset_id, update_data)
+                # Update via DAL
+                dal.update_dataset_status(dataset_id, 'completed', processed=True, source_module='dataset_service')
                 
                 logger.info("Dataset processing complete",
                            dataset_id=dataset_id,
@@ -167,11 +169,8 @@ class DatasetProcessingService:
                         dataset_id=dataset_id,
                         exc_info=e)
             
-            # Update status to failed
-            supabase_db.update_dataset(dataset_id, {
-                'status': 'failed',
-                'error_message': str(e)
-            })
+            # Update status to failed via DAL
+            dal.update_dataset_status(dataset_id, 'failed', processed=False, source_module='dataset_service')
             
             return {
                 'status': 'error',
@@ -211,8 +210,8 @@ class DatasetProcessingService:
     
     def check_dataset_status(self, dataset_id: str) -> Dict[str, Any]:
         """Check if dataset is processed and ready."""
-        # Check Supabase
-        dataset = supabase_db.get_dataset(dataset_id)
+        # Check via DAL
+        dataset = dal.get_dataset(dataset_id)
         
         if not dataset:
             return {

@@ -12,6 +12,7 @@ import structlog
 from app.api.dependencies import get_current_researcher
 from app.services.interpretation_service import interpretation_service
 from app.utils.supabase_client import supabase_db
+from app.core.data_access import dal
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -62,8 +63,8 @@ async def generate_interpretation(
         # Strip _metrics suffix if present
         base_model_id = request.model_id.replace('_metrics', '')
         
-        # Get model context
-        model = supabase_db.get_model(base_model_id)
+        # Get model context via DAL
+        model = dal.get_model(base_model_id, include_metrics=False)
         if not model:
             raise HTTPException(status_code=404, detail=f"Model {request.model_id} not found")
         
@@ -121,8 +122,8 @@ async def compare_interpretations(
         # Strip _metrics suffix if present
         base_model_id = model_id.replace('_metrics', '')
         
-        # Get model context
-        model = supabase_db.get_model(base_model_id)
+        # Get model context via DAL
+        model = dal.get_model(base_model_id, include_metrics=False)
         if not model:
             raise HTTPException(status_code=404, detail=f"Model {model_id} not found")
         
@@ -190,9 +191,9 @@ async def submit_feedback(
             "user_id": current_user
         }
         
-        if supabase_db.is_available():
-            result = supabase_db.client.table('interpretation_feedback').insert(feedback_data).execute()
-            logger.info("Feedback saved", interpretation_id=feedback.interpretation_id)
+        # Save via DAL
+        dal.save_interpretation_feedback(feedback_data, source_module="interpretation_endpoint")
+        logger.info("Feedback saved", interpretation_id=feedback.interpretation_id)
         
         return {
             "status": "success",
@@ -225,29 +226,21 @@ async def get_model_shap_data(
         
         logger.info("Fetching SHAP data", model_id=model_id, base_model_id=base_model_id)
         
-        # Get SHAP explanations for this model
-        explanations = supabase_db.list_explanations(model_id=base_model_id)
-        
-        # Find SHAP global explanation
-        shap_explanation = next(
-            (exp for exp in explanations if exp.get('method') == 'shap' and exp.get('status') == 'completed'),
-            None
-        )
+        # Get SHAP explanation via DAL
+        shap_explanation = dal.get_explanation(base_model_id, method='shap', status='completed')
         
         if not shap_explanation:
             # Provide helpful error message
             logger.warning("No SHAP explanation found", 
                           model_id=model_id, 
-                          base_model_id=base_model_id,
-                          explanations_found=len(explanations))
+                          base_model_id=base_model_id)
             
             raise HTTPException(
                 status_code=404,
                 detail={
                     "error": "No SHAP explanation found for this model",
                     "model_id": base_model_id,
-                    "help": "This model doesn't have a SHAP explanation yet. Please train a new model (SHAP is auto-generated) or select a different model.",
-                    "available_explanations": len(explanations)
+                    "help": "This model doesn't have a SHAP explanation yet. Please train a new model (SHAP is auto-generated) or select a different model."
                 }
             )
         
