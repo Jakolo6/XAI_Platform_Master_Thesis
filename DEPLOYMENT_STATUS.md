@@ -126,6 +126,26 @@
 - Easier to debug failed training jobs
 - Clear status indicators in logs
 
+### 8. Database Schema Update Required 🚨
+**Migration:** `5_add_dal_metadata_columns.sql`
+
+**Issue Found:**
+- DAL adds `last_updated` and `source_module` columns
+- These columns don't exist in current Supabase schema
+- **This is why model creation is failing!**
+
+**Required Action:**
+Run the migration in Supabase SQL Editor:
+```sql
+-- See: backend/migrations/5_add_dal_metadata_columns.sql
+```
+
+**What it adds:**
+- ✅ `last_updated` column to models, model_metrics, datasets, explanations
+- ✅ `source_module` column to track which service made changes
+- ✅ `interpretation_feedback` table for LLM interpretation ratings
+- ✅ Indexes for performance
+
 ---
 
 ## 📊 System Health
