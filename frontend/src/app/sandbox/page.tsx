@@ -13,26 +13,30 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
+  BarChart3, 
+  TrendingUp, 
+  TrendingDown, 
+  AlertCircle, 
+  CheckCircle, 
+  XCircle, 
   Brain, 
+  Target, 
+  RefreshCw, 
+  ChevronDown, 
+  ChevronUp, 
+  Code, 
+  Cpu,
+  Info,
+  GitCompare,
+  Globe,
   User,
   DollarSign,
   Home,
   Briefcase,
   Baby,
-  Car,
-  TrendingUp, 
-  TrendingDown, 
-  AlertCircle,
-  RefreshCw,
-  CheckCircle,
-  XCircle,
-  Info,
-  BarChart3,
-  GitCompare,
-  Globe,
-  Target
+  Car
 } from 'lucide-react';
 import { explanationsAPI, modelsAPI } from '@/lib/api';
 import GlobalExplanationView from './global-view';
@@ -89,6 +93,10 @@ export default function SandboxPage() {
   // Rating state
   const [ruleBasedRating, setRuleBasedRating] = useState({ clarity: 0, trust: 0, fairness: 0 });
   const [llmRating, setLlmRating] = useState({ clarity: 0, trust: 0, fairness: 0 });
+  
+  // Technical details visibility
+  const [showRuleBasedLogic, setShowRuleBasedLogic] = useState(false);
+  const [showLlmDetails, setShowLlmDetails] = useState(false);
 
   useEffect(() => {
     loadModels();
@@ -748,6 +756,32 @@ export default function SandboxPage() {
                       }} />
                     </div>
 
+                    {/* Show Logic Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setShowRuleBasedLogic(!showRuleBasedLogic)}
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+                      >
+                        <Code className="w-4 h-4" />
+                        {showRuleBasedLogic ? 'Hide Logic' : 'Show Logic'}
+                        {showRuleBasedLogic ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                      
+                      {showRuleBasedLogic && (
+                        <div className="mt-3 p-4 bg-gray-100 rounded-lg border border-gray-300">
+                          <h5 className="text-xs font-bold text-gray-700 mb-2">Rule-Based Logic:</h5>
+                          <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
+                            <li>Sort features by absolute SHAP value (importance)</li>
+                            <li>Identify top 5 most influential features</li>
+                            <li>Classify impact: Strong (&gt;0.1), Moderate (0.05-0.1), Weak (&lt;0.05)</li>
+                            <li>Determine direction: Positive (increases fraud risk) or Negative (decreases risk)</li>
+                            <li>Generate deterministic text based on thresholds</li>
+                            <li>No AI model involved - purely algorithmic</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Rating for Rule-Based */}
                     <div className="mt-6 pt-6 border-t border-gray-300">
                       <h4 className="text-sm font-semibold text-gray-900 mb-3">Rate this explanation</h4>
@@ -820,6 +854,51 @@ export default function SandboxPage() {
                           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                           .replace(/\n/g, '<br/>') 
                       }} />
+                    </div>
+
+                    {/* Show LLM Details Button */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setShowLlmDetails(!showLlmDetails)}
+                        className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-900 font-medium"
+                      >
+                        <Cpu className="w-4 h-4" />
+                        {showLlmDetails ? 'Hide LLM Details' : 'Show LLM Details'}
+                        {showLlmDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                      
+                      {showLlmDetails && (
+                        <div className="mt-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="mb-3">
+                            <h5 className="text-xs font-bold text-purple-900 mb-1 flex items-center gap-1">
+                              <Cpu className="w-3 h-3" />
+                              Model:
+                            </h5>
+                            <p className="text-xs text-purple-800 font-mono">GPT-4 (gpt-4)</p>
+                          </div>
+                          
+                          <div>
+                            <h5 className="text-xs font-bold text-purple-900 mb-1 flex items-center gap-1">
+                              <Code className="w-3 h-3" />
+                              System Prompt:
+                            </h5>
+                            <div className="text-xs text-purple-800 bg-white p-3 rounded border border-purple-200 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+{`You are an expert fraud detection analyst explaining SHAP values to non-technical stakeholders.
+
+Your task: Convert SHAP feature contributions into clear, actionable explanations.
+
+Guidelines:
+- Use simple language (avoid jargon)
+- Focus on the top 3-5 most important features
+- Explain both positive and negative contributions
+- Provide context for what each feature means
+- End with a clear summary of the prediction
+
+Format your response as natural prose, not bullet points.`}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Rating for LLM */}
