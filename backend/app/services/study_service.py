@@ -21,7 +21,7 @@ logger = structlog.get_logger()
 
 # Study configuration
 STUDY_MODEL_ID = "german_credit_xgb"
-STUDY_DATASET_ID = "uci_german_credit"
+STUDY_DATASET_ID = "german-credit"  # Updated to match database
 NUM_CASES_PER_SESSION = 6
 EXPLANATION_LAYERS = ["layer_1", "layer_2", "layer_3", "layer_4"]
 
