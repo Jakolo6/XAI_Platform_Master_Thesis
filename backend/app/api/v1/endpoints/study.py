@@ -66,6 +66,7 @@ class CaseRatingRequest(BaseModel):
     comments: Optional[str] = None
     decision_label: Optional[str] = None
     risk_score: Optional[float] = None
+    explanation_data: Optional[Dict[str, Any]] = None  # Serialized explanation for audit
 
 
 class FinalRankingRequest(BaseModel):
@@ -197,7 +198,8 @@ async def submit_case_response(request: CaseRatingRequest):
                 "time_spent": request.time_spent,
                 "comments": request.comments,
                 "decision_label": request.decision_label,
-                "risk_score": request.risk_score
+                "risk_score": request.risk_score,
+                "explanation_data": request.explanation_data  # Include serialized explanation
             }
         )
         

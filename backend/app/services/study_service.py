@@ -11,7 +11,9 @@ import random
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import structlog
+from openai import OpenAI
 
+from app.core.config import settings
 from app.services.sandbox_service import sandbox_service
 from app.utils.supabase_client import supabase_db
 
@@ -25,11 +27,27 @@ EXPLANATION_LAYERS = ["layer_1", "layer_2", "layer_3", "layer_4"]
 
 
 class StudyService:
-    """Service for managing user study sessions and case generation."""
+    """
+    Service for managing user study sessions and data collection.
+    
+    Handles:
+    - Creating study sessions with randomized explanation layer assignments
+    - Generating study cases (loan data + SHAP explanations)
+    - Formatting explanations for different interpretational layers (with OpenAI for Layers 2 & 4)
+    - Saving participant responses and ratings
+    - Managing final comparison and ranking data
+    """
     
     def __init__(self):
-        """Initialize study service."""
+        """Initialize study service with OpenAI client."""
         self._case_cache = {}  # Cache generated cases to ensure consistency
+        self.openai_client = None
+        if settings.OPENAI_API_KEY:
+            self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
+            logger.info("OpenAI client initialized for study service")
+        else:
+            logger.error("OpenAI API key not configured - Layers 2 & 4 will FAIL without it")
+            logger.error("Please set OPENAI_API_KEY in your .env file to use Layers 2 and 4")
     
     def create_study_session(self, participant_code: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -244,105 +262,399 @@ class StudyService:
         """
         Format SHAP explanation according to the assigned interpretational layer.
         
-        This is where the 4 different explanation styles will be implemented.
-        For now, returns a base structure that each layer renderer will use.
+        Implements 4 REFINED explanation styles for UCI German Credit loan decisions:
+        - Layer 1: Analytical Transparency (Machine View) - Pure SHAP, no LLM
+        - Layer 2: Conversational Summary (LLM-Generated) - OpenAI GPT-4 for friendly tone
+        - Layer 3: Story-Driven Causality (Narrative + Counterfactual) - Template-based
+        - Layer 4: Visual Dashboard + Metaphor (Cognitive Fusion) - Hybrid with LLM metaphor
         
         Args:
-            shap_explanation: Raw SHAP explanation data
-            features: Feature values
-            prediction: Model prediction probability
+            shap_explanation: Raw SHAP explanation data with features and contributions
+            features: Raw feature values for this instance
+            prediction: Model prediction probability (0-1, where higher = higher risk)
             layer: Which layer to use (layer_1, layer_2, layer_3, layer_4)
             
         Returns:
-            Formatted explanation ready for frontend rendering
+            Formatted explanation dict with layer_id, decision, and content
         """
         
         # Extract top features by importance
         top_features = shap_explanation["features"][:5]  # Top 5 most important
         
+        # Determine decision label (lower probability = good credit = approved)
+        # German Credit: target=1 is "bad credit", so lower prob = approved
+        is_approved = prediction < 0.5
+        decision_label = "APPROVED" if is_approved else "REJECTED"
+        
+        # Determine risk level
+        if prediction < 0.3:
+            risk_level = "Low Risk"
+        elif prediction < 0.6:
+            risk_level = "Medium Risk"
+        else:
+            risk_level = "High Risk"
+        
+        # Base structure
         base_explanation = {
-            "layer_type": layer,
-            "prediction_proba": shap_explanation["prediction_proba"],
-            "base_value": shap_explanation.get("base_value", 0.0),
+            "layer_id": layer,
+            "decision": {
+                "label": decision_label,
+                "score": round(prediction, 3),
+                "risk_level": risk_level
+            },
             "top_features": top_features,
             "all_features": shap_explanation["features"]
         }
         
         # ============================================================================
-        # TODO: Implement 4 different explanation layer renderers
+        # LAYER 1: Analytical Transparency (Machine View)
         # ============================================================================
-        # 
-        # Layer 1: [DEFINE YOUR FIRST INTERPRETATION STYLE]
-        # - Example: Simple feature list with +/- indicators
-        # - Format: List of "Feature X increases/decreases risk by Y"
-        #
-        # Layer 2: [DEFINE YOUR SECOND INTERPRETATION STYLE]
-        # - Example: Natural language narrative
-        # - Format: Paragraph explaining the decision
-        #
-        # Layer 3: [DEFINE YOUR THIRD INTERPRETATION STYLE]
-        # - Example: Visual bar chart data
-        # - Format: Structured data for bar chart rendering
-        #
-        # Layer 4: [DEFINE YOUR FOURTH INTERPRETATION STYLE]
-        # - Example: Counterfactual explanations
-        # - Format: "If feature X was Y, decision would change"
-        #
-        # ============================================================================
+        # Pure SHAP → sorted top 5 features with magnitude and sign
+        # No smoothing, no story, no LLM
         
         if layer == "layer_1":
-            # Placeholder for Layer 1 rendering
-            base_explanation["rendered_content"] = {
-                "type": "feature_list",
-                "title": "Key Factors (Layer 1 - Placeholder)",
-                "items": [
-                    {
-                        "feature": f["feature"],
-                        "contribution": f["contribution"],
-                        "direction": "increases risk" if f["contribution"] > 0 else "decreases risk"
-                    }
-                    for f in top_features
-                ]
+            drivers = []
+            for f in top_features:
+                direction = "increases" if f["contribution"] > 0 else "decreases"
+                drivers.append({
+                    "feature_name": f["feature"],
+                    "direction": direction,
+                    "contribution": round(f["contribution"], 4),
+                    "value": features.get(f["feature"], "N/A")
+                })
+            
+            base_explanation["content"] = {
+                "type": "analytical",
+                "title": "Key Drivers",
+                "subtitle": "Machine View - Raw SHAP Values",
+                "drivers": drivers
             }
+        
+        # ============================================================================
+        # LAYER 2: Conversational Summary (LLM-Generated)
+        # ============================================================================
+        # SHAP values → OpenAI API (gpt-4o-mini)
+        # Prompt: ≤80 words, conversational, no jargon, no numbers
         
         elif layer == "layer_2":
-            # Placeholder for Layer 2 rendering
-            base_explanation["rendered_content"] = {
-                "type": "narrative",
-                "title": "Decision Explanation (Layer 2 - Placeholder)",
-                "text": f"The model predicts a risk score of {prediction:.2%}. This is based on multiple factors..."
+            narrative = self._generate_conversational_summary(
+                top_features, features, is_approved, prediction
+            )
+            
+            base_explanation["content"] = {
+                "type": "conversational",
+                "title": "Decision Summary",
+                "subtitle": "AI Assistant Explanation",
+                "text": narrative
             }
+        
+        # ============================================================================
+        # LAYER 3: Story-Driven Causality (Narrative + Counterfactual)
+        # ============================================================================
+        # Uses both SHAP values and raw feature values
+        # Emulates counterfactual mental simulation
         
         elif layer == "layer_3":
-            # Placeholder for Layer 3 rendering
-            base_explanation["rendered_content"] = {
-                "type": "visual_chart",
-                "title": "Feature Contributions (Layer 3 - Placeholder)",
-                "chart_data": [
-                    {
-                        "feature": f["feature"],
-                        "value": f["contribution"]
-                    }
-                    for f in top_features
-                ]
+            # Get top contributing feature
+            top_driver = top_features[0]
+            feature_name = top_driver["feature"].replace("_", " ").lower()
+            feature_value = features.get(top_driver["feature"], "N/A")
+            contribution = top_driver["contribution"]
+            
+            # Build causal explanation with actual values
+            if is_approved:
+                causal_text = (
+                    f"Because your {feature_name} (value: {feature_value}) is considered favorable "
+                    f"compared to typical applicants, the system rated your risk as low. "
+                    f"This factor {'strongly' if abs(contribution) > 0.3 else 'moderately'} "
+                    f"supported the approval decision."
+                )
+                counterfactual_text = (
+                    f"If your {feature_name} were less favorable, "
+                    f"the approval likelihood would decrease significantly."
+                )
+            else:
+                causal_text = (
+                    f"Because your {feature_name} (value: {feature_value}) indicates higher risk "
+                    f"compared to typical successful applicants, the system rated your application as risky. "
+                    f"This factor {'strongly' if abs(contribution) > 0.3 else 'moderately'} "
+                    f"influenced the rejection."
+                )
+                
+                # Generate specific counterfactual
+                counterfactual_text = self._generate_counterfactual(
+                    feature_name, feature_value, contribution
+                )
+            
+            base_explanation["content"] = {
+                "type": "causal_counterfactual",
+                "title": "Why This Decision?",
+                "subtitle": "Causal Story with What-If Scenario",
+                "causal_explanation": causal_text,
+                "counterfactual": counterfactual_text
             }
         
+        # ============================================================================
+        # LAYER 4: Visual Dashboard + Metaphor (Cognitive Fusion)
+        # ============================================================================
+        # Combines numeric + linguistic + visual + metaphorical cues
+        # Emoji-enhanced drivers + risk meter + LLM metaphor
+        
         elif layer == "layer_4":
-            # Placeholder for Layer 4 rendering
-            base_explanation["rendered_content"] = {
-                "type": "counterfactual",
-                "title": "What-If Scenarios (Layer 4 - Placeholder)",
-                "scenarios": [
-                    {
-                        "feature": f["feature"],
-                        "current_value": features.get(f["feature"], "N/A"),
-                        "suggestion": "Placeholder counterfactual"
-                    }
-                    for f in top_features[:3]
-                ]
+            # Build top 3 drivers with emoji + human-readable reasons
+            drivers = []
+            for f in top_features[:3]:
+                feature_name = f["feature"].replace("_", " ").title()
+                contribution = f["contribution"]
+                magnitude = abs(contribution)
+                
+                # Assign emoji based on feature type
+                emoji = self._get_feature_emoji(f["feature"])
+                
+                # Determine strength
+                if magnitude > 0.3:
+                    strength = "strongly"
+                elif magnitude > 0.15:
+                    strength = "moderately"
+                else:
+                    strength = "slightly"
+                
+                # Determine effect
+                if contribution > 0:
+                    effect = "reduced approval" if not is_approved else "increased risk"
+                else:
+                    effect = "helped approval" if is_approved else "reduced risk"
+                
+                reason = f"{emoji} {feature_name} {strength} {effect} ({contribution:+.3f})"
+                
+                drivers.append({
+                    "feature": feature_name,
+                    "emoji": emoji,
+                    "reason": reason,
+                    "contribution": round(contribution, 3)
+                })
+            
+            # Generate risk meter text
+            approval_chance = int((1 - prediction) * 100)
+            if risk_level == "Low Risk":
+                risk_emoji = "🟢"
+            elif risk_level == "Medium Risk":
+                risk_emoji = "🟡"
+            else:
+                risk_emoji = "🔴"
+            
+            risk_meter = f"{risk_emoji} {risk_level} - {approval_chance}% approval likelihood"
+            
+            # Generate metaphor via LLM
+            metaphor = self._generate_metaphor(
+                top_features[:3], is_approved, prediction
+            )
+            
+            # Generate actionable guidance
+            guidance = self._generate_guidance(top_features, is_approved)
+            
+            base_explanation["content"] = {
+                "type": "visual_dashboard",
+                "title": "Decision Dashboard",
+                "subtitle": "Visual + Emotional Insight",
+                "decision_header": {
+                    "label": decision_label,
+                    "score": round(prediction, 3),
+                    "risk_level": risk_level,
+                    "risk_meter": risk_meter
+                },
+                "top_drivers": drivers,
+                "metaphor": metaphor,
+                "guidance": guidance
             }
         
         return base_explanation
+    
+    def _generate_conversational_summary(
+        self,
+        top_features: List[Dict[str, Any]],
+        features: Dict[str, Any],
+        is_approved: bool,
+        prediction: float
+    ) -> str:
+        """Generate conversational summary using OpenAI API (Layer 2)."""
+        if not self.openai_client:
+            logger.error("OpenAI API key not configured - Layer 2 requires OpenAI")
+            raise ValueError("Layer 2 requires OpenAI API key. Please configure OPENAI_API_KEY in environment.")
+        
+        try:
+            # Build feature summary for LLM
+            feature_list = []
+            for f in top_features[:3]:
+                feature_name = f["feature"].replace("_", " ")
+                contribution = f["contribution"]
+                effect = "helped" if contribution < 0 else "raised concerns"
+                feature_list.append(f"- {feature_name}: {effect}")
+            
+            feature_text = "\n".join(feature_list)
+            decision_text = "approved" if is_approved else "rejected"
+            
+            prompt = f"""Summarize this credit decision in ≤80 words. Be conversational and friendly, avoiding jargon and numbers.
+
+Decision: Loan {decision_text}
+Key factors:
+{feature_text}
+
+Write 2-3 sentences explaining this decision in a friendly, accessible way. Example tone: "It looks like your steady job helped, but your loan amount made the bank cautious."""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a friendly AI assistant explaining loan decisions in simple, conversational language."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=150
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            logger.error(f"OpenAI API call failed for Layer 2: {e}")
+            raise ValueError(f"Failed to generate Layer 2 explanation via OpenAI: {str(e)}")
+    
+    def _generate_counterfactual(
+        self,
+        feature_name: str,
+        feature_value: Any,
+        contribution: float
+    ) -> str:
+        """Generate counterfactual explanation (Layer 3)."""
+        if "amount" in feature_name or "credit" in feature_name:
+            return (
+                f"If the requested loan amount were about 20-30% lower, "
+                f"approval would be significantly more likely."
+            )
+        elif "income" in feature_name or "salary" in feature_name:
+            return (
+                f"If your {feature_name} were about 15-20% higher, "
+                f"approval would be significantly more likely."
+            )
+        elif "duration" in feature_name or "month" in feature_name:
+            return (
+                f"If the loan duration were shortened by 6-12 months, "
+                f"approval would be significantly more likely."
+            )
+        elif "age" in feature_name:
+            return (
+                f"While age cannot be changed, building a longer credit history "
+                f"would improve future approval chances."
+            )
+        elif "employment" in feature_name or "job" in feature_name:
+            return (
+                f"Demonstrating more stable employment history "
+                f"would significantly improve approval likelihood."
+            )
+        else:
+            return (
+                f"Improving your {feature_name} by addressing the underlying factors "
+                f"would increase the likelihood of approval."
+            )
+    
+    def _generate_metaphor(
+        self,
+        top_features: List[Dict[str, Any]],
+        is_approved: bool,
+        prediction: float
+    ) -> str:
+        """Generate one-line metaphor using OpenAI API (Layer 4)."""
+        if not self.openai_client:
+            logger.error("OpenAI API key not configured - Layer 4 requires OpenAI")
+            raise ValueError("Layer 4 requires OpenAI API key. Please configure OPENAI_API_KEY in environment.")
+        
+        try:
+            decision_text = "approved" if is_approved else "rejected"
+            risk_text = "low" if prediction < 0.5 else "high"
+            
+            # Build feature context
+            feature_names = [f["feature"].replace("_", " ") for f in top_features]
+            
+            prompt = f"""Write ONE short metaphor (≤12 words) that explains this credit decision emotionally but responsibly.
+
+Decision: Loan {decision_text}
+Risk level: {risk_text}
+Key factors: {', '.join(feature_names)}
+
+Example metaphors:
+- "Your financial engine was strong, but the loan weight slowed it."
+- "The numbers told a cautious story about your credit journey."
+- "Your foundation is solid, but the structure needs more support."
+
+Write one metaphor (≤12 words):"""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a creative writer crafting short, responsible financial metaphors."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.8,
+                max_tokens=30
+            )
+            
+            metaphor = response.choices[0].message.content.strip()
+            # Remove quotes if present
+            metaphor = metaphor.strip('"').strip("'")
+            return metaphor
+            
+        except Exception as e:
+            logger.error(f"OpenAI API call failed for Layer 4 metaphor: {e}")
+            raise ValueError(f"Failed to generate Layer 4 metaphor via OpenAI: {str(e)}")
+    
+    def _get_feature_emoji(self, feature_name: str) -> str:
+        """Get emoji for feature visualization (Layer 4)."""
+        feature_lower = feature_name.lower()
+        
+        if "amount" in feature_lower or "credit" in feature_lower:
+            return "💰"
+        elif "income" in feature_lower or "salary" in feature_lower:
+            return "💵"
+        elif "duration" in feature_lower or "month" in feature_lower:
+            return "📅"
+        elif "age" in feature_lower:
+            return "👤"
+        elif "employment" in feature_lower or "job" in feature_lower:
+            return "💼"
+        elif "saving" in feature_lower or "account" in feature_lower:
+            return "🏦"
+        elif "property" in feature_lower or "housing" in feature_lower:
+            return "🏠"
+        elif "purpose" in feature_lower:
+            return "🎯"
+        else:
+            return "📊"
+    
+    def _generate_guidance(
+        self,
+        top_features: List[Dict[str, Any]],
+        is_approved: bool
+    ) -> str:
+        """Generate actionable guidance (Layer 4)."""
+        if is_approved:
+            return (
+                "Your application meets the approval criteria. "
+                "Maintain your current financial profile for future credit needs."
+            )
+        
+        # Find most impactful negative factor
+        top_negative = next((f for f in top_features if f["contribution"] > 0), top_features[0])
+        feature_name = top_negative["feature"].replace("_", " ").lower()
+        
+        if "amount" in feature_name or "credit" in feature_name:
+            return "Consider applying for a lower loan amount to increase approval likelihood."
+        elif "income" in feature_name or "salary" in feature_name:
+            return "Increasing your income or adding a co-applicant would significantly improve approval chances."
+        elif "duration" in feature_name:
+            return "Choosing a shorter loan duration would reduce risk and increase approval likelihood."
+        elif "employment" in feature_name:
+            return "Demonstrating stable employment history would strengthen future applications."
+        else:
+            return f"Improving your {feature_name} would increase your chances of approval in future applications."
     
     def save_case_response(
         self,
@@ -355,17 +667,29 @@ class StudyService:
         """
         Save participant's response for a case.
         
+        Stores in human_evaluations table:
+        - participant_code (from session)
+        - session_id
+        - explanation layer_id (stored in 'method' column)
+        - all 4 rating dimensions (trust, understanding, usefulness, mental_effort)
+        - free text comments
+        - time spent
+        - serialized explanation blob (stored in 'comments' field as JSON)
+        
         Args:
             session_id: Study session ID
             case_index: Case number (0-5)
             instance_id: Sample instance ID
-            explanation_layer: Which layer was shown
-            ratings: Dictionary with trust, understanding, usefulness, mental_effort, comments
+            explanation_layer: Which layer was shown (layer_1, layer_2, layer_3, layer_4)
+            ratings: Dictionary with trust, understanding, usefulness, mental_effort, comments, 
+                    explanation_data (serialized), decision_label, risk_score
             
         Returns:
             Confirmation with evaluation_id
         """
         try:
+            import json
+            
             evaluation_id = str(uuid.uuid4())
             
             # Get session info for participant_code
@@ -377,24 +701,46 @@ class StudyService:
             
             participant_code = session.get('participant_code') if session else f"UNKNOWN_{session_id[:8]}"
             
+            # Prepare comments field: combine user comments + serialized explanation
+            # This allows us to audit exactly what was shown without changing schema
+            user_comments = ratings.get("comments", "")
+            explanation_data = ratings.get("explanation_data", {})
+            
+            # Create combined comments field with explanation audit trail
+            combined_comments = {
+                "user_comments": user_comments,
+                "explanation_shown": explanation_data  # Full explanation structure for audit
+            }
+            comments_json = json.dumps(combined_comments)
+            
             # Create evaluation record
+            # NOTE: Using 'method' column to store layer_id (layer_1, layer_2, layer_3, layer_4)
+            # This is intentional reuse of existing schema without modifications
             evaluation_data = {
                 "id": evaluation_id,
                 "session_id": session_id,
                 "participant_code": participant_code,
                 "model_id": STUDY_MODEL_ID,
                 "question_id": str(uuid.uuid4()),  # Generate question_id
-                "method": explanation_layer,  # Store layer type in method field
+                "method": explanation_layer,  # IMPORTANT: Stores layer_id here (layer_1, layer_2, etc.)
                 "prediction_outcome": ratings.get("decision_label", "Unknown"),
                 "prediction_confidence": ratings.get("risk_score", 0.0),
                 "trust_score": ratings["trust"],
                 "understanding_score": ratings["understanding"],
                 "usefulness_score": ratings["usefulness"],
                 "time_spent": ratings.get("time_spent", 0.0),
-                "comments": ratings.get("comments", ""),
+                "comments": comments_json,  # Stores both user comments AND serialized explanation
                 "explanation_shown": True,
                 "created_at": datetime.utcnow().isoformat()
             }
+            
+            # NOTE: mental_effort is passed in ratings but not in current schema
+            # If you want to store it separately, add column: mental_effort INTEGER
+            # For now, it's included in the explanation_data JSON in comments field
+            if "mental_effort" in ratings:
+                # Store mental_effort in comments JSON for now
+                combined_comments["mental_effort"] = ratings["mental_effort"]
+                evaluation_data["comments"] = json.dumps(combined_comments)
             
             # Save to database
             if supabase_db.is_available():
@@ -410,7 +756,8 @@ class StudyService:
                            session_id=session_id,
                            case_index=case_index,
                            evaluation_id=evaluation_id,
-                           layer=explanation_layer)
+                           layer=explanation_layer,
+                           mental_effort=ratings.get("mental_effort"))
             else:
                 logger.warning("Supabase not available, response not persisted")
             

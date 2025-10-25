@@ -56,16 +56,19 @@ interface Decision {
 }
 
 interface Explanation {
-  layer_type: string;
-  prediction_proba: number;
-  base_value: number;
-  top_features: Array<{
+  layer_id: string;
+  decision: {
+    label: string;
+    score: number;
+    risk_level: string;
+  };
+  content: any;
+  top_features?: Array<{
     feature: string;
     value: any;
     contribution: number;
     importance: number;
   }>;
-  rendered_content: any;
 }
 
 interface CaseData {
@@ -169,6 +172,7 @@ function StudySessionContent() {
     try {
       const timeSpent = (Date.now() - caseStartTime) / 1000; // seconds
       
+      // Submit ratings with serialized explanation for audit trail
       await axios.post(`${API_BASE}/study/response`, {
         session_id: sessionId,
         case_index: currentCaseIndex,
@@ -181,7 +185,8 @@ function StudySessionContent() {
         time_spent: timeSpent,
         comments: comments || null,
         decision_label: caseData.decision.label,
-        risk_score: caseData.decision.risk_score
+        risk_score: caseData.decision.risk_score,
+        explanation_data: caseData.explanation  // Include full explanation for audit
       });
       
       // Move to next case or final screen
@@ -333,13 +338,7 @@ function StudySessionContent() {
         </h3>
         
         {/* Use the ExplanationRouter to render the appropriate layer */}
-        <ExplanationRouter
-          layer_type={explanation.layer_type}
-          features={explanation.top_features}
-          prediction_proba={explanation.prediction_proba}
-          base_value={explanation.base_value}
-          rendered_content={explanation.rendered_content}
-        />
+        <ExplanationRouter data={explanation} />
       </div>
     );
   };
