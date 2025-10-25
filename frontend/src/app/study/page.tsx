@@ -31,14 +31,14 @@ export default function StudyIntroPage() {
 
     try {
       // Start a new study session
-      const response = await axios.post(`${API_BASE}/humanstudy/session/start`, {
-        num_questions: 10
+      const response = await axios.post(`${API_BASE}/study/session/start`, {
+        participant_code: null  // Anonymous participant
       });
 
-      const { session_id, randomization_seed } = response.data;
+      const { session_id, layer_assignments } = response.data;
 
       // Navigate to study session with session data
-      router.push(`/study/session?session_id=${session_id}&seed=${randomization_seed}`);
+      router.push(`/study/session?session_id=${session_id}&assignments=${layer_assignments.join(',')}`);
     } catch (error) {
       console.error('Failed to start study:', error);
       alert('Failed to start study. Please try again.');
