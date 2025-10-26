@@ -49,8 +49,22 @@ class FeatureDenormalizer:
             Dictionary of feature_name -> denormalized_value
         """
         if self.scaler is None:
-            logger.warning("No scaler available, returning normalized values")
-            return {name: float(val) for name, val in zip(feature_names, values)}
+            logger.warning("No scaler available, using approximate denormalization")
+            # Without scaler, use approximate denormalization based on typical German Credit ranges
+            result = {}
+            for name, val in zip(feature_names, values):
+                if name in ['Age', 'age']:
+                    # Age typically 19-75, mean ~35, std ~11
+                    result[name] = max(19, min(75, 35 + val * 11))
+                elif name in ['Credit amount', 'credit_amount']:
+                    # Credit amount typically 250-18424, mean ~3271, std ~2823
+                    result[name] = max(250, 3271 + val * 2823)
+                elif name in ['Duration', 'duration']:
+                    # Duration typically 4-72 months, mean ~21, std ~12
+                    result[name] = max(4, min(72, 21 + val * 12))
+                else:
+                    result[name] = float(val)
+            return result
         
         # Get numerical columns from metadata
         numerical_cols = self.metadata.get('numerical_cols', []) if self.metadata else feature_names
@@ -92,11 +106,14 @@ class FeatureDenormalizer:
         
         # Format numerical values - handle conversion errors gracefully
         try:
-            if feature_name == 'age':
+            # Handle both lowercase and capitalized column names
+            feature_lower = feature_name.lower()
+            
+            if feature_name in ['age', 'Age']:
                 return f"{display_name}: {int(float(value))} years"
-            elif feature_name == 'credit_amount':
+            elif feature_name in ['credit_amount', 'Credit amount']:
                 return f"{display_name}: €{int(float(value)):,}"
-            elif feature_name == 'duration':
+            elif feature_name in ['duration', 'Duration']:
                 return f"{display_name}: {int(float(value))} months"
             elif feature_name == 'installment_rate':
                 return f"{display_name}: {int(float(value))}%"
@@ -104,6 +121,51 @@ class FeatureDenormalizer:
                 return f"{display_name}: {int(float(value))} years"
             elif feature_name == 'existing_credits':
                 return f"{display_name}: {int(float(value))}"
+            elif feature_name in ['Sex', 'sex']:
+                # Map sex values
+                sex_map = {0: 'Female', 1: 'Male'}
+                try:
+                    return f"{display_name}: {sex_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
+            elif feature_name in ['Job', 'job']:
+                # Map job values
+                job_map = {0: 'Unskilled', 1: 'Skilled', 2: 'Highly skilled', 3: 'Management'}
+                try:
+                    return f"{display_name}: {job_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
+            elif feature_name in ['Housing', 'housing']:
+                # Map housing values
+                housing_map = {0: 'Rent', 1: 'Own', 2: 'Free'}
+                try:
+                    return f"{display_name}: {housing_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
+            elif feature_name in ['Saving accounts', 'saving_accounts', 'savings_status']:
+                # Map savings values
+                savings_map = {0: 'Little', 1: 'Moderate', 2: 'Quite rich', 3: 'Rich'}
+                try:
+                    return f"{display_name}: {savings_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
+            elif feature_name in ['Checking account', 'checking_account', 'checking_status']:
+                # Map checking values
+                checking_map = {0: 'Little', 1: 'Moderate', 2: 'Rich'}
+                try:
+                    return f"{display_name}: {checking_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
+            elif feature_name in ['Purpose', 'purpose']:
+                # Map purpose values
+                purpose_map = {
+                    0: 'Car', 1: 'Furniture', 2: 'Radio/TV', 3: 'Appliances',
+                    4: 'Repairs', 5: 'Education', 6: 'Business', 7: 'Vacation', 8: 'Other'
+                }
+                try:
+                    return f"{display_name}: {purpose_map.get(int(float(value)), 'Unknown')}"
+                except:
+                    return f"{display_name}: {value}"
             else:
                 # Default formatting
                 if isinstance(value, (int, float)):
@@ -197,6 +259,7 @@ DEFAULT_CATEGORICAL_MAPPINGS = {
 }
 
 DEFAULT_FEATURE_DISPLAY_NAMES = {
+    # Standard names
     'age': 'Age',
     'credit_amount': 'Credit Amount',
     'duration': 'Duration',
@@ -213,6 +276,16 @@ DEFAULT_FEATURE_DISPLAY_NAMES = {
     'housing': 'Housing',
     'job': 'Job Type',
     'own_telephone': 'Has Telephone',
+    # Actual German Credit dataset column names
+    'Age': 'Age',
+    'Sex': 'Gender',
+    'Job': 'Job Type',
+    'Housing': 'Housing',
+    'Saving accounts': 'Savings Account',
+    'Checking account': 'Checking Account',
+    'Credit amount': 'Credit Amount',
+    'Duration': 'Duration (months)',
+    'Purpose': 'Loan Purpose',
 }
 
 
@@ -227,18 +300,19 @@ def format_loan_applicant_summary(denormalized_data: Dict[str, Any]) -> str:
         Formatted summary string
     """
     try:
-        age = denormalized_data.get('age', {}).get('raw_value', 'Unknown')
-        credit_amount = denormalized_data.get('credit_amount', {}).get('raw_value', 0)
-        duration = denormalized_data.get('duration', {}).get('raw_value', 0)
-        employment = denormalized_data.get('employment', {}).get('display_string', 'Unknown employment')
+        # Try both lowercase and capitalized column names
+        age = (denormalized_data.get('age', {}) or denormalized_data.get('Age', {})).get('raw_value', 'Unknown')
+        credit_amount = (denormalized_data.get('credit_amount', {}) or denormalized_data.get('Credit amount', {})).get('raw_value', 0)
+        duration = (denormalized_data.get('duration', {}) or denormalized_data.get('Duration', {})).get('raw_value', 0)
+        job = (denormalized_data.get('job', {}) or denormalized_data.get('Job', {})).get('display_string', 'Unknown job')
         
         # Safe conversion with fallbacks
         age_str = f"{int(float(age))}" if isinstance(age, (int, float)) else str(age)
         credit_str = f"€{int(float(credit_amount)):,}" if isinstance(credit_amount, (int, float)) else str(credit_amount)
         duration_str = f"{int(float(duration))}" if isinstance(duration, (int, float)) else str(duration)
-        employment_str = employment.split(': ')[1] if ': ' in employment else employment
+        job_str = job.split(': ')[1] if ': ' in job else job
         
-        summary = f"Applicant: {age_str} years old, {employment_str}, requesting {credit_str} for {duration_str} months"
+        summary = f"Applicant: {age_str} years old, {job_str}, requesting {credit_str} for {duration_str} months"
         
         return summary
     except Exception as e:

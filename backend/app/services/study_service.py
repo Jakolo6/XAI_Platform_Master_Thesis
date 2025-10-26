@@ -251,12 +251,17 @@ class StudyService:
         for feature_name, data in denormalized_data.items():
             display_string = data.get('display_string', str(data.get('raw_value', '')))
             
-            # Categorize by feature name
-            if feature_name in ['age', 'employment', 'job', 'housing', 'present_residence']:
+            # Skip Unnamed columns
+            if 'Unnamed' in feature_name:
+                continue
+            
+            # Categorize by feature name (handle both cases)
+            feature_lower = feature_name.lower()
+            if feature_name in ['age', 'Age', 'employment', 'job', 'Job', 'housing', 'Housing', 'present_residence', 'Sex']:
                 loan_data["applicant_info"][feature_name] = display_string
-            elif feature_name in ['credit_amount', 'duration', 'installment_rate', 'purpose']:
+            elif feature_name in ['credit_amount', 'Credit amount', 'duration', 'Duration', 'installment_rate', 'purpose', 'Purpose']:
                 loan_data["loan_details"][feature_name] = display_string
-            elif feature_name in ['checking_status', 'savings_status', 'credit_history', 'existing_credits']:
+            elif feature_name in ['checking_status', 'Checking account', 'savings_status', 'Saving accounts', 'credit_history', 'existing_credits']:
                 loan_data["financial_status"][feature_name] = display_string
             else:
                 loan_data["other_info"][feature_name] = display_string
