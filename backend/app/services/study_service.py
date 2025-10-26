@@ -231,42 +231,59 @@ class StudyService:
         Returns:
             Formatted loan data with denormalized, human-readable values
         """
-        # Denormalize features for human display
-        denormalized_data = self.denormalizer.denormalize_instance(features)
-        
-        # Create human-readable summary
-        summary = format_loan_applicant_summary(denormalized_data)
-        
-        # Organize features into categories
-        loan_data = {
-            "summary": summary,
-            "applicant_info": {},
-            "loan_details": {},
-            "financial_status": {},
-            "other_info": {},
-            "raw_features": denormalized_data  # Include full denormalized data
-        }
-        
-        # Categorize features for display
-        for feature_name, data in denormalized_data.items():
-            display_string = data.get('display_string', str(data.get('raw_value', '')))
+        try:
+            # Denormalize features for human display
+            denormalized_data = self.denormalizer.denormalize_instance(features)
             
-            # Skip Unnamed columns
-            if 'Unnamed' in feature_name:
-                continue
+            # Create human-readable summary
+            summary = format_loan_applicant_summary(denormalized_data)
             
-            # Categorize by feature name (handle both cases)
-            feature_lower = feature_name.lower()
-            if feature_name in ['age', 'Age', 'employment', 'job', 'Job', 'housing', 'Housing', 'present_residence', 'Sex']:
-                loan_data["applicant_info"][feature_name] = display_string
-            elif feature_name in ['credit_amount', 'Credit amount', 'duration', 'Duration', 'installment_rate', 'purpose', 'Purpose']:
-                loan_data["loan_details"][feature_name] = display_string
-            elif feature_name in ['checking_status', 'Checking account', 'savings_status', 'Saving accounts', 'credit_history', 'existing_credits']:
-                loan_data["financial_status"][feature_name] = display_string
-            else:
-                loan_data["other_info"][feature_name] = display_string
-        
-        return loan_data
+            # Organize features into categories
+            loan_data = {
+                "summary": summary,
+                "applicant_info": {},
+                "loan_details": {},
+                "financial_status": {},
+                "other_info": {},
+                "raw_features": denormalized_data  # Include full denormalized data
+            }
+            
+            # Categorize features for display
+            for feature_name, data in denormalized_data.items():
+                try:
+                    display_string = data.get('display_string', str(data.get('raw_value', '')))
+                    
+                    # Skip Unnamed columns
+                    if 'Unnamed' in feature_name:
+                        continue
+                    
+                    # Categorize by feature name (handle both cases)
+                    feature_lower = feature_name.lower()
+                    if feature_name in ['age', 'Age', 'employment', 'job', 'Job', 'housing', 'Housing', 'present_residence', 'Sex']:
+                        loan_data["applicant_info"][feature_name] = display_string
+                    elif feature_name in ['credit_amount', 'Credit amount', 'duration', 'Duration', 'installment_rate', 'purpose', 'Purpose']:
+                        loan_data["loan_details"][feature_name] = display_string
+                    elif feature_name in ['checking_status', 'Checking account', 'savings_status', 'Saving accounts', 'credit_history', 'existing_credits']:
+                        loan_data["financial_status"][feature_name] = display_string
+                    else:
+                        loan_data["other_info"][feature_name] = display_string
+                except Exception as e:
+                    logger.warning(f"Failed to categorize feature {feature_name}", error=str(e))
+                    continue
+            
+            return loan_data
+            
+        except Exception as e:
+            logger.error("Failed to format loan data", error=str(e), exc_info=True)
+            # Return minimal fallback
+            return {
+                "summary": "Loan application",
+                "applicant_info": {},
+                "loan_details": {},
+                "financial_status": {},
+                "other_info": {k: str(v) for k, v in features.items()},
+                "raw_features": {}
+            }
     
     def _format_explanation_for_layer(
         self,

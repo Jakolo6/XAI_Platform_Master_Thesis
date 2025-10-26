@@ -53,17 +53,24 @@ class FeatureDenormalizer:
             # Without scaler, use approximate denormalization based on typical German Credit ranges
             result = {}
             for name, val in zip(feature_names, values):
-                if name in ['Age', 'age']:
-                    # Age typically 19-75, mean ~35, std ~11
-                    result[name] = max(19, min(75, 35 + val * 11))
-                elif name in ['Credit amount', 'credit_amount']:
-                    # Credit amount typically 250-18424, mean ~3271, std ~2823
-                    result[name] = max(250, 3271 + val * 2823)
-                elif name in ['Duration', 'duration']:
-                    # Duration typically 4-72 months, mean ~21, std ~12
-                    result[name] = max(4, min(72, 21 + val * 12))
-                else:
-                    result[name] = float(val)
+                try:
+                    # Convert to float first, skip if not numeric
+                    numeric_val = float(val)
+                    
+                    if name in ['Age', 'age']:
+                        # Age typically 19-75, mean ~35, std ~11
+                        result[name] = max(19, min(75, 35 + numeric_val * 11))
+                    elif name in ['Credit amount', 'credit_amount']:
+                        # Credit amount typically 250-18424, mean ~3271, std ~2823
+                        result[name] = max(250, 3271 + numeric_val * 2823)
+                    elif name in ['Duration', 'duration']:
+                        # Duration typically 4-72 months, mean ~21, std ~12
+                        result[name] = max(4, min(72, 21 + numeric_val * 12))
+                    else:
+                        result[name] = numeric_val
+                except (ValueError, TypeError):
+                    # If conversion fails, keep original value (likely categorical)
+                    result[name] = val
             return result
         
         # Get numerical columns from metadata
@@ -186,21 +193,39 @@ class FeatureDenormalizer:
         Returns:
             Dictionary with denormalized values and formatted display strings
         """
-        feature_names = list(instance.keys())
-        values = np.array([instance[f] for f in feature_names])
-        
-        # Denormalize numerical features
-        denormalized = self.denormalize_numerical(values, feature_names)
-        
-        # Create display-friendly version
-        display_values = {}
-        for feature_name, value in denormalized.items():
-            display_values[feature_name] = {
-                'raw_value': value,
-                'display_string': self.format_for_display(feature_name, value)
+        try:
+            feature_names = list(instance.keys())
+            values = np.array([instance[f] for f in feature_names])
+            
+            # Denormalize numerical features
+            denormalized = self.denormalize_numerical(values, feature_names)
+            
+            # Create display-friendly version
+            display_values = {}
+            for feature_name, value in denormalized.items():
+                try:
+                    display_values[feature_name] = {
+                        'raw_value': value,
+                        'display_string': self.format_for_display(feature_name, value)
+                    }
+                except Exception as e:
+                    logger.warning(f"Failed to format feature {feature_name}", error=str(e))
+                    # Fallback to simple string representation
+                    display_values[feature_name] = {
+                        'raw_value': value,
+                        'display_string': f"{feature_name}: {value}"
+                    }
+            
+            return display_values
+        except Exception as e:
+            logger.error("Failed to denormalize instance", error=str(e), exc_info=True)
+            # Return minimal fallback
+            return {
+                k: {
+                    'raw_value': v,
+                    'display_string': f"{k}: {v}"
+                } for k, v in instance.items()
             }
-        
-        return display_values
 
 
 # Default categorical mappings (fallback if metadata not available)
