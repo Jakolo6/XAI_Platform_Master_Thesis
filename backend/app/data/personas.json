@@ -1,0 +1,150 @@
+{
+  "personas": [
+    {
+      "id": "persona_high_risk",
+      "name": "High Credit Demand, Short Employment",
+      "description": "Likely rejection due to high credit amount and short employment history",
+      "features": {
+        "age": 28,
+        "credit_amount": 9500,
+        "duration": 48,
+        "installment_rate": 4,
+        "present_residence": 1,
+        "existing_credits": 2,
+        "checking_status": 0,
+        "credit_history": 3,
+        "purpose": 0,
+        "savings_status": 0,
+        "employment": 1,
+        "property_magnitude": 0,
+        "other_payment_plans": 0,
+        "housing": 0,
+        "job": 1,
+        "own_telephone": 0
+      },
+      "expected_outcome": "rejected",
+      "expected_probability": 0.32
+    },
+    {
+      "id": "persona_borderline",
+      "name": "Middle-Income, Average Duration",
+      "description": "Borderline case with moderate risk factors",
+      "features": {
+        "age": 35,
+        "credit_amount": 4500,
+        "duration": 24,
+        "installment_rate": 3,
+        "present_residence": 3,
+        "existing_credits": 1,
+        "checking_status": 1,
+        "credit_history": 2,
+        "purpose": 2,
+        "savings_status": 1,
+        "employment": 2,
+        "property_magnitude": 1,
+        "other_payment_plans": 2,
+        "housing": 1,
+        "job": 2,
+        "own_telephone": 1
+      },
+      "expected_outcome": "borderline",
+      "expected_probability": 0.55
+    },
+    {
+      "id": "persona_low_risk",
+      "name": "Long-Term Employed, Small Loan",
+      "description": "Likely approval due to stable employment and modest loan request",
+      "features": {
+        "age": 42,
+        "credit_amount": 2500,
+        "duration": 12,
+        "installment_rate": 2,
+        "present_residence": 4,
+        "existing_credits": 1,
+        "checking_status": 2,
+        "credit_history": 2,
+        "purpose": 5,
+        "savings_status": 2,
+        "employment": 4,
+        "property_magnitude": 2,
+        "other_payment_plans": 2,
+        "housing": 1,
+        "job": 3,
+        "own_telephone": 1
+      },
+      "expected_outcome": "approved",
+      "expected_probability": 0.78
+    }
+  ],
+  "feature_descriptions": {
+    "age": "Applicant's age in years",
+    "credit_amount": "Loan amount requested in Deutsche Mark (DM)",
+    "duration": "Loan duration in months",
+    "installment_rate": "Installment rate as percentage of disposable income",
+    "present_residence": "Years at current residence",
+    "existing_credits": "Number of existing credits at this bank",
+    "checking_status": "Status of checking account (0=<0 DM, 1=0-200 DM, 2=>200 DM, 3=none)",
+    "credit_history": "Credit history (0=no credits, 1=all paid, 2=existing paid, 3=delayed, 4=critical)",
+    "purpose": "Purpose of credit (0=new car, 1=used car, 2=furniture, 3=radio/TV, etc.)",
+    "savings_status": "Savings account balance (0=<100 DM, 1=100-500 DM, 2=500-1000 DM, 3=>1000 DM, 4=unknown)",
+    "employment": "Employment length (0=unemployed, 1=<1 year, 2=1-4 years, 3=4-7 years, 4=>7 years)",
+    "property_magnitude": "Property ownership (0=none, 1=car, 2=real estate)",
+    "other_payment_plans": "Other installment plans (0=bank, 1=stores, 2=none)",
+    "housing": "Housing situation (0=rent, 1=own, 2=for free)",
+    "job": "Job type (0=unemployed, 1=unskilled, 2=skilled, 3=highly skilled)",
+    "own_telephone": "Has telephone (0=no, 1=yes)"
+  },
+  "categorical_mappings": {
+    "checking_status": {
+      "0": "< 0 DM",
+      "1": "0 - 200 DM",
+      "2": "> 200 DM",
+      "3": "No checking account"
+    },
+    "credit_history": {
+      "0": "No credits / all paid",
+      "1": "All paid this bank",
+      "2": "Existing paid",
+      "3": "Delayed payment",
+      "4": "Critical account"
+    },
+    "purpose": {
+      "0": "New car",
+      "1": "Used car",
+      "2": "Furniture/equipment",
+      "3": "Radio/TV",
+      "4": "Domestic appliances",
+      "5": "Repairs",
+      "6": "Education",
+      "7": "Vacation",
+      "8": "Retraining",
+      "9": "Business",
+      "10": "Other"
+    },
+    "savings_status": {
+      "0": "< 100 DM",
+      "1": "100 - 500 DM",
+      "2": "500 - 1000 DM",
+      "3": "> 1000 DM",
+      "4": "Unknown / no savings"
+    },
+    "employment": {
+      "0": "Unemployed",
+      "1": "< 1 year",
+      "2": "1 - 4 years",
+      "3": "4 - 7 years",
+      "4": "> 7 years"
+    },
+    "housing": {
+      "0": "Rent",
+      "1": "Own",
+      "2": "For free"
+    },
+    "job": {
+      "0": "Unemployed/unskilled",
+      "1": "Unskilled resident",
+      "2": "Skilled",
+      "3": "Highly skilled"
+    }
+  }
+}

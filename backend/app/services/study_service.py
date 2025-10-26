@@ -12,10 +12,17 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import structlog
 from openai import OpenAI
+import numpy as np
+from pathlib import Path
 
 from app.core.config import settings
 from app.services.sandbox_service import sandbox_service
 from app.utils.supabase_client import supabase_db
+from app.utils.denormalization import (
+    FeatureDenormalizer,
+    format_loan_applicant_summary,
+    create_feature_list_for_display
+)
 
 logger = structlog.get_logger()
 
@@ -39,7 +46,7 @@ class StudyService:
     """
     
     def __init__(self):
-        """Initialize study service with OpenAI client."""
+        """Initialize study service with OpenAI client and denormalizer."""
         self._case_cache = {}  # Cache generated cases to ensure consistency
         self.openai_client = None
         if settings.OPENAI_API_KEY:
@@ -48,6 +55,21 @@ class StudyService:
         else:
             logger.error("OpenAI API key not configured - Layers 2 & 4 will FAIL without it")
             logger.error("Please set OPENAI_API_KEY in your .env file to use Layers 2 and 4")
+        
+        # Initialize denormalizer for human-readable values
+        # Note: Paths will be updated once model is trained and uploaded
+        scaler_path = Path("data/models/german_credit_fair/german_credit_scaler.pkl")
+        metadata_path = Path("data/models/german_credit_fair/model_metadata.pkl")
+        
+        self.denormalizer = FeatureDenormalizer(
+            scaler_path=str(scaler_path) if scaler_path.exists() else None,
+            metadata_path=str(metadata_path) if metadata_path.exists() else None
+        )
+        
+        if scaler_path.exists():
+            logger.info("Denormalizer initialized with scaler and metadata")
+        else:
+            logger.warning("Denormalizer initialized without scaler - will show normalized values")
     
     def create_study_session(self, participant_code: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -201,54 +223,43 @@ class StudyService:
     def _format_loan_data(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """
         Format raw feature values into human-readable loan application data.
+        Uses denormalization to show real-world values to participants.
         
         Args:
-            features: Raw feature dictionary from model
+            features: Raw (normalized) feature dictionary from model
             
         Returns:
-            Formatted loan data with readable labels
+            Formatted loan data with denormalized, human-readable values
         """
-        # Map technical feature names to human-readable labels
-        # Note: Actual feature names depend on preprocessing
-        # This is a template - adjust based on actual German Credit features
+        # Denormalize features for human display
+        denormalized_data = self.denormalizer.denormalize_instance(features)
         
+        # Create human-readable summary
+        summary = format_loan_applicant_summary(denormalized_data)
+        
+        # Organize features into categories
         loan_data = {
+            "summary": summary,
             "applicant_info": {},
             "loan_details": {},
             "financial_status": {},
-            "other_info": {}
+            "other_info": {},
+            "raw_features": denormalized_data  # Include full denormalized data
         }
         
-        # Extract and categorize features
-        for feature_name, value in features.items():
-            # Format the value
-            if isinstance(value, float):
-                formatted_value = round(value, 2)
-            else:
-                formatted_value = value
+        # Categorize features for display
+        for feature_name, data in denormalized_data.items():
+            display_string = data.get('display_string', str(data.get('raw_value', '')))
             
-            # Categorize by feature name patterns
-            # (These mappings should be adjusted based on actual feature names)
-            if 'age' in feature_name.lower():
-                loan_data["applicant_info"]["Age"] = formatted_value
-            elif 'duration' in feature_name.lower():
-                loan_data["loan_details"]["Duration (months)"] = formatted_value
-            elif 'credit_amount' in feature_name.lower() or 'amount' in feature_name.lower():
-                loan_data["loan_details"]["Credit Amount"] = formatted_value
-            elif 'employment' in feature_name.lower():
-                loan_data["applicant_info"]["Employment Length"] = formatted_value
-            elif 'housing' in feature_name.lower():
-                loan_data["applicant_info"]["Housing"] = formatted_value
-            elif 'checking' in feature_name.lower():
-                loan_data["financial_status"]["Checking Account"] = formatted_value
-            elif 'savings' in feature_name.lower():
-                loan_data["financial_status"]["Savings Account"] = formatted_value
-            elif 'installment' in feature_name.lower():
-                loan_data["loan_details"]["Installment Rate"] = formatted_value
-            elif 'job' in feature_name.lower():
-                loan_data["applicant_info"]["Job Type"] = formatted_value
+            # Categorize by feature name
+            if feature_name in ['age', 'employment', 'job', 'housing', 'present_residence']:
+                loan_data["applicant_info"][feature_name] = display_string
+            elif feature_name in ['credit_amount', 'duration', 'installment_rate', 'purpose']:
+                loan_data["loan_details"][feature_name] = display_string
+            elif feature_name in ['checking_status', 'savings_status', 'credit_history', 'existing_credits']:
+                loan_data["financial_status"][feature_name] = display_string
             else:
-                loan_data["other_info"][feature_name] = formatted_value
+                loan_data["other_info"][feature_name] = display_string
         
         return loan_data
     
