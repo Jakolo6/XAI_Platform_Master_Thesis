@@ -82,29 +82,37 @@ class FeatureDenormalizer:
         categorical_mappings = self.metadata.get('categorical_mappings', {}) if self.metadata else {}
         
         if feature_name in categorical_mappings:
-            # Map categorical value
-            mapped_value = categorical_mappings[feature_name].get(int(value), f"Unknown ({value})")
+            # Map categorical value - handle both int and string values
+            try:
+                int_value = int(float(value)) if isinstance(value, (int, float, str)) else value
+                mapped_value = categorical_mappings[feature_name].get(int_value, f"Unknown ({value})")
+            except (ValueError, TypeError):
+                mapped_value = str(value)
             return f"{display_name}: {mapped_value}"
         
-        # Format numerical values
-        if feature_name == 'age':
-            return f"{display_name}: {int(value)} years"
-        elif feature_name == 'credit_amount':
-            return f"{display_name}: €{int(value):,}"
-        elif feature_name == 'duration':
-            return f"{display_name}: {int(value)} months"
-        elif feature_name == 'installment_rate':
-            return f"{display_name}: {int(value)}%"
-        elif feature_name == 'present_residence':
-            return f"{display_name}: {int(value)} years"
-        elif feature_name == 'existing_credits':
-            return f"{display_name}: {int(value)}"
-        else:
-            # Default formatting
-            if isinstance(value, float):
-                return f"{display_name}: {value:.2f}"
+        # Format numerical values - handle conversion errors gracefully
+        try:
+            if feature_name == 'age':
+                return f"{display_name}: {int(float(value))} years"
+            elif feature_name == 'credit_amount':
+                return f"{display_name}: €{int(float(value)):,}"
+            elif feature_name == 'duration':
+                return f"{display_name}: {int(float(value))} months"
+            elif feature_name == 'installment_rate':
+                return f"{display_name}: {int(float(value))}%"
+            elif feature_name == 'present_residence':
+                return f"{display_name}: {int(float(value))} years"
+            elif feature_name == 'existing_credits':
+                return f"{display_name}: {int(float(value))}"
             else:
-                return f"{display_name}: {value}"
+                # Default formatting
+                if isinstance(value, (int, float)):
+                    return f"{display_name}: {value:.2f}" if isinstance(value, float) else f"{display_name}: {value}"
+                else:
+                    return f"{display_name}: {value}"
+        except (ValueError, TypeError):
+            # If conversion fails, just return as string
+            return f"{display_name}: {value}"
     
     def denormalize_instance(self, instance: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -218,14 +226,24 @@ def format_loan_applicant_summary(denormalized_data: Dict[str, Any]) -> str:
     Returns:
         Formatted summary string
     """
-    age = denormalized_data.get('age', {}).get('raw_value', 'Unknown')
-    credit_amount = denormalized_data.get('credit_amount', {}).get('raw_value', 0)
-    duration = denormalized_data.get('duration', {}).get('raw_value', 0)
-    employment = denormalized_data.get('employment', {}).get('display_string', 'Unknown employment')
-    
-    summary = f"Applicant: {int(age)} years old, {employment.split(': ')[1] if ': ' in employment else employment}, requesting €{int(credit_amount):,} for {int(duration)} months"
-    
-    return summary
+    try:
+        age = denormalized_data.get('age', {}).get('raw_value', 'Unknown')
+        credit_amount = denormalized_data.get('credit_amount', {}).get('raw_value', 0)
+        duration = denormalized_data.get('duration', {}).get('raw_value', 0)
+        employment = denormalized_data.get('employment', {}).get('display_string', 'Unknown employment')
+        
+        # Safe conversion with fallbacks
+        age_str = f"{int(float(age))}" if isinstance(age, (int, float)) else str(age)
+        credit_str = f"€{int(float(credit_amount)):,}" if isinstance(credit_amount, (int, float)) else str(credit_amount)
+        duration_str = f"{int(float(duration))}" if isinstance(duration, (int, float)) else str(duration)
+        employment_str = employment.split(': ')[1] if ': ' in employment else employment
+        
+        summary = f"Applicant: {age_str} years old, {employment_str}, requesting {credit_str} for {duration_str} months"
+        
+        return summary
+    except Exception as e:
+        logger.warning("Failed to format loan applicant summary", error=str(e))
+        return "Loan applicant information"
 
 
 def create_feature_list_for_display(denormalized_data: Dict[str, Any], top_n: int = 5) -> List[Dict[str, str]]:

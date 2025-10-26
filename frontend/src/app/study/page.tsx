@@ -72,8 +72,14 @@ export default function StudyIntroPage() {
           </h2>
           <p className="text-lg text-gray-200 mb-6">
             Help us understand how humans perceive AI explanations in credit risk assessment systems.
-            Your feedback will contribute to making AI more interpretable and trustworthy.
+            Your feedback will contribute to making AI more interpretable, trustworthy, and fair.
           </p>
+          <div className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4 mb-4">
+            <p className="text-sm text-blue-200">
+              <strong>🛡️ Ethical AI:</strong> This study uses an ethically-trained model that excludes discriminatory features 
+              (gender, nationality, marital status) to ensure fair credit assessments.
+            </p>
+          </div>
 
           {/* Study Info Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
