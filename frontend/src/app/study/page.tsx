@@ -71,7 +71,7 @@ export default function StudyIntroPage() {
             Welcome to Our Research Study
           </h2>
           <p className="text-lg text-gray-200 mb-6">
-            Help us understand how humans perceive AI explanations in fraud detection systems.
+            Help us understand how humans perceive AI explanations in credit risk assessment systems.
             Your feedback will contribute to making AI more interpretable and trustworthy.
           </p>
 
@@ -85,8 +85,8 @@ export default function StudyIntroPage() {
 
             <div className="bg-purple-500/20 border border-purple-400/30 rounded-lg p-4">
               <Users className="h-8 w-8 text-purple-300 mb-2" />
-              <div className="text-sm font-medium text-purple-200">Questions</div>
-              <div className="text-2xl font-bold text-white">10 cases</div>
+              <div className="text-sm font-medium text-purple-200">Cases</div>
+              <div className="text-2xl font-bold text-white">6 cases</div>
             </div>
 
             <div className="bg-green-500/20 border border-green-400/30 rounded-lg p-4">
@@ -107,9 +107,9 @@ export default function StudyIntroPage() {
                 1
               </div>
               <div>
-                <h4 className="text-lg font-semibold text-white mb-2">View a Decision</h4>
+                <h4 className="text-lg font-semibold text-white mb-2">View a Loan Decision</h4>
                 <p className="text-gray-300">
-                  You'll see a fraud detection decision (e.g., "Transaction flagged as fraud" or "Transaction approved").
+                  You'll see a loan application decision (e.g., "Loan Approved" or "Loan Rejected") along with applicant information.
                 </p>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function StudyIntroPage() {
               <div>
                 <h4 className="text-lg font-semibold text-white mb-2">See the Explanation</h4>
                 <p className="text-gray-300">
-                  An explanation will show which features influenced the decision (e.g., transaction amount, card number, location).
+                  An AI explanation will show which factors influenced the decision (e.g., credit amount, duration, checking account status).
                 </p>
               </div>
             </div>
@@ -133,12 +133,13 @@ export default function StudyIntroPage() {
               <div>
                 <h4 className="text-lg font-semibold text-white mb-2">Rate Your Experience</h4>
                 <p className="text-gray-300">
-                  Answer three simple questions on a 1-5 scale:
+                  Answer four questions on a 1-5 scale:
                 </p>
                 <ul className="list-disc list-inside mt-2 space-y-1 text-gray-300 ml-4">
-                  <li><strong>Trust:</strong> How confident are you in this decision?</li>
+                  <li><strong>Trust:</strong> How much do you trust this explanation?</li>
                   <li><strong>Understanding:</strong> Do you understand why this decision was made?</li>
                   <li><strong>Usefulness:</strong> Is this explanation helpful?</li>
+                  <li><strong>Mental Effort:</strong> How much effort did it take to understand?</li>
                 </ul>
               </div>
             </div>
@@ -204,8 +205,8 @@ export default function StudyIntroPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-400">
-          <p>Questions or concerns? Contact: research@xai-platform.com</p>
-          <p className="mt-2">This study is part of a Master's thesis on Explainable AI</p>
+          <p>Questions or concerns? Contact: jakob.lindner@student.uibk.ac.at</p>
+          <p className="mt-2">This study is part of a Master's thesis on Explainable AI at the University of Innsbruck</p>
         </div>
       </div>
     </div>
